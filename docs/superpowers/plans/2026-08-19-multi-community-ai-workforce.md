@@ -187,10 +187,10 @@
 - Update: `/home/thoma/SYSTEM_LOG.md` only when a cross-system live canary or migration actually changes state.
 - Update: the relevant Hermes `AGENT_LOG.md` only if a Hermes runtime/config path is actually changed.
 
-- [ ] Run `cargo fmt --manifest-path desktop/src-tauri/Cargo.toml --all -- --check` and the focused Rust suite, then `cargo test --manifest-path desktop/src-tauri/Cargo.toml`.
-- [ ] Run `pnpm --dir desktop test`, `pnpm --dir desktop typecheck`, `pnpm --dir desktop check`, and the relevant Playwright smoke flow.
-- [ ] Build the desktop artifact without launching it and record artifact hashes.
-- [ ] Run the migration tool against a copied live store in dry-run mode; verify 35 logical employees, all expected memberships, zero key conflicts, and byte-preserving rollback.
+- [x] Run `cargo fmt --manifest-path desktop/src-tauri/Cargo.toml --all -- --check` and the focused Rust suite, then `cargo test --manifest-path desktop/src-tauri/Cargo.toml`.
+- [x] Run `pnpm --dir desktop test`, `pnpm --dir desktop typecheck`, `pnpm --dir desktop check`, and the relevant Playwright smoke flow. The workforce-relevant flows pass; one unchanged memory-sharing layout assertion is recorded in the canary checklist.
+- [x] Build the desktop artifact without launching it and record artifact hashes.
+- [x] Run the migration tool against a copied live store in dry-run mode; verify 35 logical employees, all expected memberships, zero key conflicts, and byte-preserving rollback.
 - [ ] Capture a fresh live backup and process/receipt inventory before any canary.
 - [ ] Canary one low-risk employee on one existing community, then the same pubkey on a second community; prove prompt/context isolation and model precedence.
 - [ ] Canary one existing Hermes identity in an additional community without changing or restarting its base Hermes runtime.
@@ -200,12 +200,12 @@
 
 ## Completion criteria
 
-- [ ] The Buzz directory displays 35 logical AI employees once each and every registered Hermes identity once.
-- [ ] Each identity can list multiple community memberships without cloned profiles.
-- [ ] Runtime context is selected only from the authenticated canonical relay and cross-company probes fail closed.
-- [ ] Approved facts are injected; proposed/rejected facts are not.
-- [ ] Task override > company-role override > role default is tested and visible.
-- [ ] Adding a draft company or membership is data-only.
-- [ ] Damen and DSRY have validated draft context packages and remain stopped until exact relay ownership and canaries pass.
-- [ ] The legacy store migration is dry-run-first, backed up, idempotent, and rollback verified.
-- [ ] Existing WSL, Hermes, Buzz, and healthy agent processes were not disrupted by staging.
+- [x] The Buzz directory displays 35 logical AI employees once each and every registered Hermes identity once.
+- [x] Each identity can list multiple community memberships without cloned profiles.
+- [x] Runtime context is selected only from the authenticated canonical relay and cross-company probes fail closed.
+- [x] Approved facts are injected; proposed/rejected facts are not.
+- [x] Task override > company-role override > role default is tested and visible.
+- [x] Adding a draft company or membership is data-only.
+- [x] Damen and DSRY have validated draft context packages and remain stopped until exact relay ownership and canaries pass.
+- [x] The legacy store migration is dry-run-first, backed up, idempotent, and rollback verified.
+- [x] Existing WSL, Hermes, Buzz, and healthy agent processes were not disrupted by staging.
