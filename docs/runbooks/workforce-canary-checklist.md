@@ -2,18 +2,15 @@
 
 Date: 2026-08-19
 
-## Staging evidence
+## Current Buzz 0.5.17 staging evidence
 
-- Branch: `feature/multi-community-workforce`
-- Full Rust suite: 1,823 passed, 14 ignored, 0 failed; all migration and seed integration tests passed.
-- Frontend suite: 3,650 passed, 0 failed; typecheck, repository checks, and production build passed.
-- Playwright: 7 edit/model tests and 18 of 19 Agents integration tests passed. The workforce-relevant duplicate-instance test passed. One unchanged memory-sharing layout assertion remains reproducibly failing because its right-edge position differs by about 35-39 px.
-- Copied-live-store dry-run: 35 identities, 70 duplicate records removable, 105 memberships, 0 conflicts.
-- Copied-live-store apply and second run: 35 identities, 3 active communities, 105 memberships; second run reported no changes.
-- Copied-live-store rollback: byte-exact (`feee7374df089daf0eea8b38a04ce7ae4eca35db77d0a61929f8ef99dfeb111d` before and after).
-- Release binary: `101407c62017f96c9a9affc7a9f0160add8ec637b8ddc8995151b92ed09e006b` (91,874,088 bytes).
-- Production frontend index: `e1396905ea122c299b801c2fa44b163b0500f61efbc16b949e9f9290d2d3360d`.
-- Production frontend file-set digest: `eb15baeb17b791d87a00f3590e5365507560f1282e1bcc0716fc0c1ca2e11566`.
+- Branch: `feature/multi-community-workforce-v0517`; base: upstream Buzz `0.5.17`.
+- Rust: `cargo check --all-targets` passed for the desktop package; the standalone migration crate's 2 integration tests passed.
+- Frontend: 5,103 tests passed, 0 failed; typecheck, repository checks, and production build passed.
+- Live-store dry-run with the Windows release migrator: 35 identities, 70 duplicate records removable, 105 memberships, 0 conflicts.
+- Dry-run immutability: live managed-store SHA-256 stayed `feee7374df089daf0eea8b38a04ce7ae4eca35db77d0a61929f8ef99dfeb111d`; no workforce store was created.
+- Windows migration release executable built successfully from the standalone crate.
+- Desktop installer build is pending Visual C++ 2022 build tools. The installed 2019 toolset cannot link Buzz 0.5.17's prebuilt sherpa/ONNX objects (`LNK1120`, 41 unresolved `__std_*` symbols).
 
 No live Buzz store, relay, agent process, WSL service, or Hermes runtime/configuration was changed during staging.
 
