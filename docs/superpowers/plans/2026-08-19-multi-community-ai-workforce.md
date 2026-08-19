@@ -151,13 +151,13 @@
 - Create: `desktop/src-tauri/tests/workforce_migration.rs`
 - Create: `docs/runbooks/workforce-migration.md`
 
-- [ ] Write fixture-based tests for the current pattern: three records with the same pubkey/profile become one canonical managed-agent identity plus three memberships, with per-company model/context metadata preserved.
-- [ ] Refuse conflicting keys, prompts, avatars, persona IDs, or unsupported records and report them without writing.
-- [ ] Implement default `--dry-run`; require explicit `--apply`, write timestamped backups and a machine-readable receipt, and support receipt-driven rollback.
-- [ ] Make reruns idempotent and keep running-process receipts untouched.
-- [ ] Document exact preflight, backup, canary, apply, verify, and rollback commands.
-- [ ] Run migration fixtures twice to prove idempotence and rollback byte equality.
-- [ ] Commit with `git commit -s -m "feat(workforce): add reversible identity migration"`.
+- [x] Write fixture-based tests for the current pattern: three records with the same pubkey/profile become one canonical managed-agent identity plus three memberships, with per-company model/context metadata preserved.
+- [x] Refuse conflicting keys, prompts, avatars, persona IDs, or unsupported records and report them without writing.
+- [x] Implement default `--dry-run`; require explicit `--apply`, write timestamped backups and a machine-readable receipt, and support receipt-driven rollback.
+- [x] Make reruns idempotent and keep running-process receipts untouched.
+- [x] Document exact preflight, backup, canary, apply, verify, and rollback commands.
+- [x] Run migration fixtures twice to prove idempotence and rollback byte equality.
+- [x] Commit with `git commit -s -m "feat(workforce): add reversible identity migration"`.
 
 ## Task 9: Seed existing companies, Damen, DSRY, and Hermes references
 
