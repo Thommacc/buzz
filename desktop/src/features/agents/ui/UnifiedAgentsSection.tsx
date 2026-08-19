@@ -19,6 +19,7 @@ import { Badge } from "@/shared/ui/badge";
 import { IdentityCardSkeleton } from "@/shared/ui/identity-card-skeleton";
 import { AgentIdentityCard } from "./AgentIdentityCard";
 import { AgentCommunityMemberships } from "./AgentCommunityMemberships";
+import { AgentIntakePanel } from "./AgentIntakePanel";
 import { AgentRuntimeAvatarControl } from "./AgentRuntimeAvatarControl";
 import { CreateIdentityCard } from "./CreateIdentityCard";
 import { PersonaActionsMenu } from "./PersonaActionsMenu";
@@ -154,6 +155,7 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
     >
       {isLoading ? <LoadingSkeleton /> : null}
 
+      <AgentIntakePanel />
       <AgentCommunityMemberships />
 
       {!isLoading ? (

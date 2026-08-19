@@ -136,12 +136,12 @@
 - Modify: `desktop/src/features/agents/ui/UnifiedAgentsSection.tsx`
 - Create: `desktop/src-tauri/resources/workforce/role-catalog.v1.json`
 
-- [ ] Import the 35 existing role identities into a data catalog with department, plain-language `useWhen`, required inputs, expected outputs, safety boundary, and default model policy.
-- [ ] Write deterministic intake tests for representative finance, sales, HR, legal, operations, marketing, and technical tasks, returning one primary and at most two supporting roles.
-- [ ] Add a searchable directory and `AI Team - Intake & Regie` panel that explains the recommendation, inputs/outputs, resolved model, and approval needs before work starts.
-- [ ] Ensure intake recommends only roles enabled in the authenticated active community.
-- [ ] Run intake tests, typecheck, and frontend checks.
-- [ ] Commit with `git commit -s -m "feat(workforce): add role intake and directory"`.
+- [x] Import the 35 existing role identities into a data catalog with department, plain-language `useWhen`, required inputs, expected outputs, safety boundary, and default model policy.
+- [x] Write deterministic intake tests for representative finance, sales, HR, legal, operations, marketing, and technical tasks, returning one primary and at most two supporting roles.
+- [x] Add a searchable directory and `AI Team - Intake & Regie` panel that explains the recommendation, inputs/outputs, resolved model, and approval needs before work starts.
+- [x] Ensure intake recommends only roles enabled in the authenticated active community.
+- [x] Run intake tests, typecheck, and frontend checks.
+- [x] Commit with `git commit -s -m "feat(workforce): add role intake and directory"`.
 
 ## Task 8: Build a reversible legacy-store migration tool
 
