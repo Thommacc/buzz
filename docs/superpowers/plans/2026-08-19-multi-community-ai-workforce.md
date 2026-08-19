@@ -29,12 +29,12 @@
 - Create: `desktop/src-tauri/src/managed_agents/workforce/mod.rs`
 - Modify: `desktop/src-tauri/src/managed_agents/mod.rs`
 
-- [ ] Write failing tests for schema-version rejection, duplicate company IDs, duplicate canonical relays, unknown role/member references, invalid lifecycle states, unapproved context exclusion, and Hermes reference validation.
-- [ ] Define `WorkforceStore`, `WorkforceIdentity`, `CommunityRecord`, `CommunityMembership`, `CompanyContext`, `ContextFact`, `ModelPolicy`, and `RolloutState` with backward-compatible Serde defaults.
-- [ ] Add canonical relay lookup and validation that fails closed on unknown, duplicated, disabled, or malformed communities.
-- [ ] Keep Hermes identities reference-only: stable pubkey/profile reference plus membership metadata, with no prompt/model/tool fields.
-- [ ] Run `cargo test -p buzz-desktop managed_agents::workforce` from the repository root.
-- [ ] Commit with `git commit -s -m "feat(workforce): add typed community registry"`.
+- [x] Write failing tests for schema-version rejection, duplicate company IDs, duplicate canonical relays, unknown role/member references, invalid lifecycle states, unapproved context exclusion, and Hermes reference validation.
+- [x] Define `WorkforceStore`, `WorkforceIdentity`, `CommunityRecord`, `CommunityMembership`, `CompanyContext`, `ContextFact`, `ModelPolicy`, and `RolloutState` with backward-compatible Serde defaults.
+- [x] Add canonical relay lookup and validation that fails closed on unknown, duplicated, disabled, or malformed communities.
+- [x] Keep Hermes identities reference-only: stable pubkey/profile reference plus membership metadata, with no prompt/model/tool fields.
+- [x] Run `cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib managed_agents::workforce` from the repository root.
+- [x] Commit with `git commit -s -m "feat(workforce): add typed community registry"`.
 
 ## Task 2: Add atomic workforce storage and audit-safe context approval
 
@@ -49,7 +49,7 @@
 - [ ] Store control-plane data at `agents/workforce/workforce.json` and context packages at `agents/workforce/contexts/<company_id>.json`; use temp-file plus rename semantics matching the managed-agent store.
 - [ ] Implement proposal and approval operations that keep source, timestamp, reviewer, confidence, and status, and inject only approved non-superseded facts.
 - [ ] Ensure failed writes retain the previous approved version and surface a diagnostic.
-- [ ] Run `cargo test -p buzz-desktop managed_agents::workforce`.
+- [ ] Run `cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib managed_agents::workforce`.
 - [ ] Commit with `git commit -s -m "feat(workforce): persist approved company context"`.
 
 ## Task 3: Resolve membership, prompt layers, and model precedence
@@ -68,7 +68,7 @@
 - [ ] Add `ResolvedWorkforceExecution` with company/context/role versions and hashes suitable for receipts without logging prompt text or secrets.
 - [ ] Call the resolver once in `spawn_agent_child`, then emit the composed prompt/model while retaining current behavior for identities not yet enrolled in workforce mode.
 - [ ] Include the workforce resolution in `spawn_config_hash` so a context or model-policy change produces an accurate restart-needed signal.
-- [ ] Run `cargo test -p buzz-desktop managed_agents::workforce managed_agents::runtime managed_agents::spawn_hash`.
+- [ ] Run the focused `managed_agents::workforce`, `managed_agents::runtime`, and `managed_agents::spawn_hash` tests with `cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib <filter>`.
 - [ ] Commit with `git commit -s -m "feat(workforce): resolve community context at spawn"`.
 
 ## Task 4: Make community membership control runtime fan-out
@@ -187,7 +187,7 @@
 - Update: `/home/thoma/SYSTEM_LOG.md` only when a cross-system live canary or migration actually changes state.
 - Update: the relevant Hermes `AGENT_LOG.md` only if a Hermes runtime/config path is actually changed.
 
-- [ ] Run `cargo fmt --all -- --check` and the focused Rust suite, then `cargo test -p buzz-desktop`.
+- [ ] Run `cargo fmt --manifest-path desktop/src-tauri/Cargo.toml --all -- --check` and the focused Rust suite, then `cargo test --manifest-path desktop/src-tauri/Cargo.toml`.
 - [ ] Run `pnpm --dir desktop test`, `pnpm --dir desktop typecheck`, `pnpm --dir desktop check`, and the relevant Playwright smoke flow.
 - [ ] Build the desktop artifact without launching it and record artifact hashes.
 - [ ] Run the migration tool against a copied live store in dry-run mode; verify 35 logical employees, all expected memberships, zero key conflicts, and byte-preserving rollback.
