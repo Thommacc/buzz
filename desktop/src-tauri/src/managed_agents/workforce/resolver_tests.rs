@@ -314,3 +314,49 @@ fn hermes_membership_keeps_base_prompt_and_model_unmodified() {
     assert!(result.model.is_none());
     assert_eq!(result.hermes_profile_ref.as_deref(), Some("hermes:nova"));
 }
+
+#[test]
+fn proactive_start_requires_enabled_membership_opt_in() {
+    let (mut store, _) = fixture();
+    assert!(
+        !should_proactively_start_identity(&store, &"aa".repeat(32), "wss://acme.example")
+            .expect("resolve")
+    );
+    store.communities[0].memberships[0].start_on_app_launch = true;
+    assert!(
+        should_proactively_start_identity(&store, &"aa".repeat(32), "wss://acme.example")
+            .expect("resolve")
+    );
+    store.communities[0].memberships[0].enabled = false;
+    assert!(
+        !should_proactively_start_identity(&store, &"aa".repeat(32), "wss://acme.example")
+            .expect("resolve")
+    );
+}
+
+#[test]
+fn proactive_start_is_pair_scoped_and_legacy_agents_keep_compatibility() {
+    let (mut store, _) = fixture();
+    store.communities[0].memberships[0].start_on_app_launch = true;
+    let mut second = store.communities[0].clone();
+    second.company_id = "other".into();
+    second.display_name = "Other".into();
+    second.relay_url = Some("wss://other.example".into());
+    second.context_ref = "contexts/other.json".into();
+    second.memberships[0].start_on_app_launch = false;
+    store.communities.push(second);
+    assert!(
+        should_proactively_start_identity(&store, &"aa".repeat(32), "wss://acme.example")
+            .expect("resolve")
+    );
+    assert!(
+        !should_proactively_start_identity(&store, &"aa".repeat(32), "wss://other.example")
+            .expect("resolve")
+    );
+    assert!(should_proactively_start_identity(
+        &store,
+        &"cc".repeat(32),
+        "wss://unregistered.example"
+    )
+    .expect("legacy compatibility"));
+}

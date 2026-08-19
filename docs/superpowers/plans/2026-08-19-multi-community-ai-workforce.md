@@ -80,13 +80,13 @@
 - Modify: `desktop/src-tauri/src/managed_agents/restore.rs`
 - Modify: `desktop/src-tauri/src/managed_agents/runtime/stop.rs`
 
-- [ ] Write failing tests that one logical employee fans out only to enabled memberships, one failed community does not block another, and stopping one pair leaves the identity's other community pair running.
-- [ ] Filter proactive reconciliation through workforce membership instead of every local auto-start record joining every configured community.
-- [ ] Preserve explicit/manual pair start for an enabled membership and fail closed for a disabled or absent membership.
-- [ ] Restore only previously valid enabled pairs; never auto-start draft Damen/DSRY memberships.
-- [ ] Prove the same pubkey remains the runtime identity across two relay pairs.
-- [ ] Run the focused runtime and restore tests.
-- [ ] Commit with `git commit -s -m "feat(workforce): enforce community memberships"`.
+- [x] Write failing tests that one logical employee fans out only to enabled memberships, one failed community does not block another, and stopping one pair leaves the identity's other community pair running.
+- [x] Filter proactive reconciliation through workforce membership instead of every local auto-start record joining every configured community.
+- [x] Preserve explicit/manual pair start for an enabled membership and fail closed for a disabled or absent membership.
+- [x] Restore only previously valid enabled pairs; never auto-start draft Damen/DSRY memberships.
+- [x] Prove the same pubkey remains the runtime identity across two relay pairs.
+- [x] Run the focused runtime and restore tests.
+- [x] Commit with `git commit -s -m "feat(workforce): enforce community memberships"`.
 
 ## Task 5: Expose workforce commands and TypeScript API contracts
 

@@ -464,15 +464,23 @@ pub async fn reconcile_managed_agent_runtimes(
     use futures_util::{stream, StreamExt};
 
     let records = load_managed_agents(&app)?;
+    let workforce = super::workforce::load_workforce(&app)?;
     let mut jobs = Vec::new();
     for community in communities {
-        for record in records
-            .iter()
-            .filter(|record| record.start_on_app_launch && record.backend == BackendKind::Local)
-        // The legacy per-record relay pin is deliberately ignored here — see
-        // `effective_agent_relay_url`. Every local auto-start agent fans out
-        // to every configured community.
-        {
+        for record in &records {
+            if !record.start_on_app_launch || record.backend != BackendKind::Local {
+                continue;
+            }
+            // Legacy identities keep the historical fan-out behavior. Once an
+            // identity is enrolled, the company registry becomes authoritative
+            // and proactive fan-out requires a pair-specific membership opt-in.
+            if !super::workforce::should_proactively_start_identity(
+                &workforce,
+                &record.pubkey,
+                &community.relay_url,
+            )? {
+                continue;
+            }
             jobs.push((record.clone(), community.relay_url.clone()));
         }
     }

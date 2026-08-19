@@ -38,6 +38,35 @@ pub struct ResolvedWorkforceExecution {
     pub prompt_hash: Option<String>,
 }
 
+/// Whether proactive reconciliation/restore may start this exact identity and
+/// relay pair. Identities not yet enrolled retain legacy behavior; enrolled
+/// identities require both membership enablement and the per-community
+/// auto-start opt-in.
+pub fn should_proactively_start_identity(
+    store: &WorkforceStore,
+    pubkey: &str,
+    authenticated_relay_url: &str,
+) -> Result<bool, String> {
+    let Some(identity) = store
+        .identities
+        .iter()
+        .find(|identity| identity.pubkey.eq_ignore_ascii_case(pubkey))
+    else {
+        return Ok(true);
+    };
+    let validated = store
+        .validate()
+        .map_err(|error| format!("workforce validation failed: {error}"))?;
+    let Some(community) = validated.community_for_relay(authenticated_relay_url) else {
+        return Ok(false);
+    };
+    Ok(community.memberships.iter().any(|membership| {
+        membership.identity_id == identity.identity_id
+            && membership.enabled
+            && membership.start_on_app_launch
+    }))
+}
+
 pub fn resolve_workforce_execution(
     store: &WorkforceStore,
     pubkey: &str,

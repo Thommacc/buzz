@@ -100,6 +100,8 @@ pub async fn restore_managed_agents_on_launch(
     }
 
     let state = app.state::<AppState>();
+    let workforce = super::workforce::load_workforce(app)?;
+    let restore_relay = crate::relay::relay_ws_url_with_override(&state);
 
     // ── Phase A (under lock): housekeeping + collect agents to restore ──
     let mut agents_to_start: Vec<super::ManagedAgentRecord>;
@@ -165,11 +167,19 @@ pub async fn restore_managed_agents_on_launch(
         // replacing the three separate kernel enumerations.
         super::sweep_untracked_bundle_harnesses(&tracked_pids);
 
-        let candidates: Vec<String> = records
+        let mut candidates = Vec::new();
+        for record in records
             .iter()
             .filter(|record| record.start_on_app_launch && record.backend == BackendKind::Local)
-            .map(|record| record.pubkey.clone())
-            .collect();
+        {
+            if super::workforce::should_proactively_start_identity(
+                &workforce,
+                &record.pubkey,
+                &restore_relay,
+            )? {
+                candidates.push(record.pubkey.clone());
+            }
+        }
 
         let mut to_start = Vec::new();
         for pubkey in &candidates {
