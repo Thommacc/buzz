@@ -27,6 +27,8 @@ pub(crate) use metadata::{
     DISPLAY_NAME_ENV_VAR, SESSION_TITLE_ENV_VAR,
 };
 
+mod workforce;
+
 mod stop;
 pub(crate) use stop::managed_agent_runtime_keys;
 pub use stop::{stop_managed_agent_process, stop_managed_agent_workspace_pair};
@@ -468,18 +470,8 @@ pub fn spawn_agent_child(
                     crate::managed_agents::user_facing_harness_error(&e)
                 )
             })?;
-    // Workforce mode is opt-in per stable pubkey. Legacy records retain their
-    // existing prompt/model behavior. Once enrolled, the authenticated pair
-    // relay is the only company selector; missing membership/context refuses
-    // before log creation or process spawn.
     let workforce_execution =
-        crate::managed_agents::workforce::resolve_workforce_execution_for_app(
-            app,
-            &record.pubkey,
-            &runtime_key.relay_url,
-            None,
-            None,
-        )?;
+        workforce::resolve_for_app(app, &record.pubkey, &runtime_key.relay_url)?;
     let effective_command = &descriptor.command;
     let agent_args = &descriptor.args;
 
@@ -733,18 +725,12 @@ pub fn spawn_agent_child(
     let mut effective_prompt = effective_cfg.system_prompt.value;
     let mut effective_model = effective_cfg.model.value;
     let mut effective_provider = effective_cfg.provider.value;
-    if let Some(workforce) = &workforce_execution {
-        // Hermes entries are reference-only and intentionally carry neither a
-        // replacement prompt nor model. Employee entries replace all three as
-        // one resolved company-scoped unit.
-        if let Some(prompt) = &workforce.system_prompt {
-            effective_prompt = Some(prompt.clone());
-        }
-        if let Some(model) = &workforce.model {
-            effective_model = Some(model.model.clone());
-            effective_provider = Some(model.provider.clone());
-        }
-    }
+    workforce::apply_resolved_config(
+        workforce_execution.as_ref(),
+        &mut effective_prompt,
+        &mut effective_model,
+        &mut effective_provider,
+    );
 
     if let Some(prompt) = &effective_prompt {
         command.env("BUZZ_ACP_SYSTEM_PROMPT", prompt);
@@ -844,50 +830,7 @@ pub fn spawn_agent_child(
     for (key, value) in &descriptor.env {
         command.env(key, value);
     }
-    if let Some(workforce) = &workforce_execution {
-        command.env("BUZZ_WORKFORCE_COMPANY_ID", &workforce.company_id);
-        command.env("BUZZ_WORKFORCE_IDENTITY_ID", &workforce.identity_id);
-        command.env(
-            "BUZZ_WORKFORCE_CONTEXT_VERSION",
-            workforce.context_version.to_string(),
-        );
-        command.env("BUZZ_WORKFORCE_CONTEXT_HASH", &workforce.context_hash);
-        if let Some(role_version) = workforce.role_version {
-            command.env("BUZZ_WORKFORCE_ROLE_VERSION", role_version.to_string());
-        } else {
-            command.env_remove("BUZZ_WORKFORCE_ROLE_VERSION");
-        }
-        if let Some(role_hash) = &workforce.role_hash {
-            command.env("BUZZ_WORKFORCE_ROLE_HASH", role_hash);
-        } else {
-            command.env_remove("BUZZ_WORKFORCE_ROLE_HASH");
-        }
-        if let Some(profile_ref) = &workforce.hermes_profile_ref {
-            command.env("BUZZ_WORKFORCE_HERMES_PROFILE_REF", profile_ref);
-        } else {
-            command.env_remove("BUZZ_WORKFORCE_HERMES_PROFILE_REF");
-        }
-        // User env is intentionally written before this block. Enrolled
-        // employee prompt/model selection is a trusted tenant-bound result and
-        // cannot be shadowed by a saved BUZZ_ACP_* behavior knob.
-        if let Some(prompt) = &workforce.system_prompt {
-            command.env("BUZZ_ACP_SYSTEM_PROMPT", prompt);
-        }
-        if let Some(model) = &workforce.model {
-            command.env("BUZZ_ACP_MODEL", &model.model);
-            if let Some(meta) = runtime_meta {
-                for (key, value) in runtime_metadata_env_vars(
-                    meta.model_env_var,
-                    meta.provider_env_var,
-                    meta.provider_locked,
-                    Some(&model.model),
-                    Some(&model.provider),
-                ) {
-                    command.env(key, value);
-                }
-            }
-        }
-    }
+    workforce::apply_trusted_env(&mut command, workforce_execution.as_ref(), runtime_meta);
 
     // B5: carry persisted effort; harness resolves thought_level configId at first session.
     // Written after descriptor.env so the canonical persisted value wins.

@@ -10,7 +10,7 @@ import {
   setWorkforceCompanyModelOverride,
   upsertWorkforceDraftCommunity,
 } from "@/shared/api/tauriWorkforce";
-import type { WorkforceSummary } from "@/shared/api/types";
+import type { WorkforceSummary } from "@/shared/api/workforceTypes";
 
 export const workforceQueryKey = ["workforce"] as const;
 

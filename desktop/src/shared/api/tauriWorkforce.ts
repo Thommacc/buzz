@@ -6,7 +6,7 @@ import type {
   WorkforceModelRoute,
   WorkforceRoutePreview,
   WorkforceSummary,
-} from "@/shared/api/types";
+} from "@/shared/api/workforceTypes";
 
 export function getWorkforceSummary(): Promise<WorkforceSummary> {
   return invokeTauri("get_workforce_summary");

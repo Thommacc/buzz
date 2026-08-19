@@ -117,14 +117,14 @@
 - Modify: `desktop/src/features/settings/ui/ActiveAgentCommunitiesSettingsCard.tsx`
 - Modify: `desktop/src/features/agents/AGENTS.md`
 
-- [ ] Write failing UI-core tests that duplicate legacy rows sharing a pubkey collapse to one identity, distinct pubkeys remain separate, and runtime connector rows never become employee cards.
-- [ ] Group by stable identity/pubkey first and persona second; show one name/avatar/role with community badges and per-community runtime health.
-- [ ] Add membership controls for existing Buzz employees and a separate Hermes section whose entries are identity references only.
-- [ ] Show role default model, company override, resolved model, and why that route won.
-- [ ] Keep draft/canary memberships visibly stopped and require explicit enable/start actions.
-- [ ] Update the feature-level `AGENTS.md` because config modeling and rendering changed.
-- [ ] Run `pnpm --dir desktop test -- unifiedAgentGroups`, `pnpm --dir desktop typecheck`, and `pnpm --dir desktop check`.
-- [ ] Commit with `git commit -s -m "feat(workforce): show one agent across communities"`.
+- [x] Write failing UI-core tests that duplicate legacy rows sharing a pubkey collapse to one identity, distinct pubkeys remain separate, and runtime connector rows never become employee cards.
+- [x] Group by stable identity/pubkey first and persona second; show one name/avatar/role with community badges and per-community runtime health.
+- [x] Add membership controls for existing Buzz employees and a separate Hermes section whose entries are identity references only.
+- [x] Show role default model, company override, resolved model, and why that route won.
+- [x] Keep draft/canary memberships visibly stopped and require explicit enable/start actions.
+- [x] Update the feature-level `AGENTS.md` because config modeling and rendering changed.
+- [x] Run `pnpm --dir desktop test -- unifiedAgentGroups`, `pnpm --dir desktop typecheck`, and `pnpm --dir desktop check`.
+- [x] Commit with `git commit -s -m "feat(workforce): show one agent across communities"`.
 
 ## Task 7: Add intake and role discovery for all 35 employees
 

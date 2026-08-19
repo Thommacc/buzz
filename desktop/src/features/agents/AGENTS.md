@@ -38,6 +38,13 @@ with a TypeScript lookup table or an id comparison in a component.
 
 ## Rules
 
+0. **A workforce identity is keyed by pubkey, not company or runtime row.** The
+   Agents library renders one logical identity and attaches community
+   memberships beneath it. Company context and company model overrides are
+   membership metadata. Hermes entries are references to an existing Hermes
+   profile/runtime and must never copy or replace Hermes prompts, models,
+   tools, keys, or process ownership.
+
 1. **No hardcoded harness-ID checks in render code.** `runtime.id === "claude"`
    belongs in `deriveAgentConfigFieldModel` (once, with a named reason), never
    in a component. Components ask the field model what exists

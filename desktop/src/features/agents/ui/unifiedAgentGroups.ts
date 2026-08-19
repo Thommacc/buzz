@@ -1,4 +1,5 @@
 import type { AgentPersona, ManagedAgent } from "@/shared/api/types";
+import { pickProfileAgent } from "@/features/agents/lib/pickProfileAgent";
 
 type PersonaGroup = { persona: AgentPersona; agents: ManagedAgent[] };
 
@@ -18,10 +19,11 @@ export function buildUnifiedGroups(
   agents: ManagedAgent[],
   isArchived: (pubkey: string) => boolean,
 ) {
+  const identities = dedupeManagedAgentsByPubkey(agents, isArchived);
   const byPersonaId = new Map<string, ManagedAgent[]>();
   const ungrouped: ManagedAgent[] = [];
 
-  for (const agent of agents) {
+  for (const agent of identities) {
     if (!agent.personaId) {
       if (!isArchived(agent.pubkey)) ungrouped.push(agent);
     } else {
@@ -45,4 +47,20 @@ export function buildUnifiedGroups(
   }
 
   return { groups, ungrouped, unknown };
+}
+export function dedupeManagedAgentsByPubkey(
+  agents: ManagedAgent[],
+  isArchived: (pubkey: string) => boolean = () => false,
+): ManagedAgent[] {
+  const byPubkey = new Map<string, ManagedAgent[]>();
+  for (const agent of agents) {
+    const key = agent.pubkey.trim().toLowerCase();
+    const duplicates = byPubkey.get(key) ?? [];
+    duplicates.push(agent);
+    byPubkey.set(key, duplicates);
+  }
+  return [...byPubkey.values()].flatMap((duplicates) => {
+    const selected = pickProfileAgent(duplicates, isArchived);
+    return selected ? [selected] : [];
+  });
 }

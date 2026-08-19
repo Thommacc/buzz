@@ -10,6 +10,7 @@ import { friendlyAgentLastError } from "@/features/agents/lib/friendlyAgentLastE
 import { isManagedAgentActive } from "@/features/agents/lib/managedAgentControlActions";
 import { pickProfileAgent } from "@/features/agents/lib/pickProfileAgent";
 import { useIsArchivedPredicate } from "@/features/identity-archive/hooks";
+import { useWorkforceQuery } from "@/features/agents/workforceHooks";
 import { useUserProfileQuery } from "@/features/profile/hooks";
 import type { AgentPersona, ManagedAgent } from "@/shared/api/types";
 import type { ProfilePanelOpenOptions } from "@/shared/context/ProfilePanelContext";
@@ -17,6 +18,7 @@ import { useFeedbackToasts } from "@/shared/hooks/useToastEffect";
 import { Badge } from "@/shared/ui/badge";
 import { IdentityCardSkeleton } from "@/shared/ui/identity-card-skeleton";
 import { AgentIdentityCard } from "./AgentIdentityCard";
+import { AgentCommunityMemberships } from "./AgentCommunityMemberships";
 import { AgentRuntimeAvatarControl } from "./AgentRuntimeAvatarControl";
 import { CreateIdentityCard } from "./CreateIdentityCard";
 import { PersonaActionsMenu } from "./PersonaActionsMenu";
@@ -96,9 +98,40 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
   } = props;
 
   const isArchived = useIsArchivedPredicate();
+  const workforceQuery = useWorkforceQuery();
+  const enrolledPubkeys = React.useMemo(
+    () =>
+      new Set(
+        (workforceQuery.data?.identities ?? []).map((identity) =>
+          identity.pubkey.toLowerCase(),
+        ),
+      ),
+    [workforceQuery.data],
+  );
+  const legacyAgents = React.useMemo(
+    () =>
+      agents.filter(
+        (agent) => !enrolledPubkeys.has(agent.pubkey.toLowerCase()),
+      ),
+    [agents, enrolledPubkeys],
+  );
+  const enrolledPersonaIds = React.useMemo(
+    () =>
+      new Set(
+        agents
+          .filter((agent) => enrolledPubkeys.has(agent.pubkey.toLowerCase()))
+          .flatMap((agent) => (agent.personaId ? [agent.personaId] : [])),
+      ),
+    [agents, enrolledPubkeys],
+  );
+  const legacyPersonas = React.useMemo(
+    () => personas.filter((persona) => !enrolledPersonaIds.has(persona.id)),
+    [personas, enrolledPersonaIds],
+  );
+
   const { groups, ungrouped, unknown } = React.useMemo(
-    () => buildUnifiedGroups(personas, agents, isArchived),
-    [personas, agents, isArchived],
+    () => buildUnifiedGroups(legacyPersonas, legacyAgents, isArchived),
+    [legacyPersonas, legacyAgents, isArchived],
   );
   const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
   function toggle(key: string) {
@@ -120,6 +153,8 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
       data-testid="agents-library-personas"
     >
       {isLoading ? <LoadingSkeleton /> : null}
+
+      <AgentCommunityMemberships />
 
       {!isLoading ? (
         <div className="space-y-3" data-testid="unified-agents-groups">

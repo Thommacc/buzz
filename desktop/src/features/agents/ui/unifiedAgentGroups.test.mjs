@@ -1,17 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildUnifiedGroups } from "./unifiedAgentGroups.ts";
+import {
+  buildUnifiedGroups,
+  dedupeManagedAgentsByPubkey,
+} from "./unifiedAgentGroups.ts";
+import { partitionWorkforceIdentities } from "./workforcePresentation.ts";
 
 const NONE_ARCHIVED = () => false;
 
-function agent(overrides = {}) {
+function agent(pubkeyOrOverrides = {}, overrides = {}) {
+  const resolvedOverrides =
+    typeof pubkeyOrOverrides === "string" ? overrides : pubkeyOrOverrides;
+  const pubkey =
+    typeof pubkeyOrOverrides === "string"
+      ? pubkeyOrOverrides
+      : (resolvedOverrides.pubkey ?? "a".repeat(64));
   return {
-    name: "Agent",
-    pubkey: "a".repeat(64),
-    personaId: null,
-    status: "stopped",
-    ...overrides,
+    pubkey,
+    name: resolvedOverrides.name ?? "Agent",
+    personaId: resolvedOverrides.personaId ?? null,
+    status: resolvedOverrides.status ?? "stopped",
+    pid: resolvedOverrides.pid ?? null,
+    ...resolvedOverrides,
   };
 }
 
@@ -74,4 +85,61 @@ test("a fail-open predicate keeps every standalone agent discoverable", () => {
   const { ungrouped } = buildUnifiedGroups([], [first, second], NONE_ARCHIVED);
 
   assert.equal(ungrouped.length, 2);
+});
+
+test("duplicate legacy rows sharing a pubkey collapse to one identity", () => {
+  const duplicate = dedupeManagedAgentsByPubkey([
+    agent("AA", { name: "Finance", relayUrl: "wss://one" }),
+    agent("aa", {
+      name: "Finance duplicate",
+      relayUrl: "wss://two",
+      status: "running",
+      pid: 42,
+    }),
+  ]);
+
+  assert.equal(duplicate.length, 1);
+  assert.equal(duplicate[0].name, "Finance duplicate");
+});
+
+test("distinct pubkeys remain separate identities", () => {
+  assert.equal(
+    dedupeManagedAgentsByPubkey([agent("aa"), agent("bb")]).length,
+    2,
+  );
+});
+
+test("one deduplicated identity appears in only one persona group", () => {
+  const personas = [
+    { id: "finance", displayName: "Finance" },
+    { id: "sales", displayName: "Sales" },
+  ];
+  const result = buildUnifiedGroups(personas, [
+    agent("aa", { personaId: "finance", status: "stopped" }),
+    agent("AA", { personaId: "finance", status: "running", pid: 7 }),
+  ]);
+
+  assert.equal(result.groups[0].agents.length, 1);
+  assert.equal(result.groups[1].agents.length, 0);
+});
+
+test("Hermes runtime references never become employee cards", () => {
+  const result = partitionWorkforceIdentities([
+    { identityId: "faye", pubkey: "aa", kind: "employee" },
+    {
+      identityId: "hermes-atlas",
+      pubkey: "bb",
+      kind: "hermes",
+      hermesProfileRef: "atlas",
+    },
+  ]);
+
+  assert.deepEqual(
+    result.employees.map((identity) => identity.identityId),
+    ["faye"],
+  );
+  assert.deepEqual(
+    result.hermes.map((identity) => identity.identityId),
+    ["hermes-atlas"],
+  );
 });
