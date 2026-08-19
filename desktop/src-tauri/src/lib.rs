@@ -17,6 +17,11 @@ mod linux_media;
 #[cfg(target_os = "macos")]
 mod macos_notifications;
 mod managed_agents;
+
+/// Narrow public schema surface for validating bundled workforce resources.
+pub mod workforce_schema {
+    pub use crate::managed_agents::workforce::{CompanyContext, WorkforceStore};
+}
 mod media_proxy;
 #[cfg(feature = "mesh-llm")]
 mod mesh_llm;

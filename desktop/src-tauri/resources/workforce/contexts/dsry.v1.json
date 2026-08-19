@@ -1,0 +1,16 @@
+{
+  "companyId": "dsry",
+  "version": 0,
+  "revision": 0,
+  "approvedAt": null,
+  "facts": [],
+  "documents": [],
+  "templates": {},
+  "reviewItems": [
+    "Confirm what DSRY expands to, the exact legal entity, and the approved display name.",
+    "Obtain and verify the owned Buzz relay URL; do not infer it from the company name.",
+    "Approve business goals, departments, terminology, policies, and decision rights.",
+    "Select employee and Hermes memberships; keep every membership stopped by default.",
+    "Health-check and approve model routes before the first canary."
+  ]
+}

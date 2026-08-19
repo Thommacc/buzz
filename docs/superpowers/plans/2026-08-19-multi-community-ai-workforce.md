@@ -172,12 +172,12 @@
 - Create: `desktop/src-tauri/resources/workforce/hermes-identities.v1.json`
 - Create: `desktop/src-tauri/tests/workforce_seed_validation.rs`
 
-- [ ] Generate existing-company records from the read-only live inventory, not remembered relay IDs.
-- [ ] Seed Damen and DSRY as `draft` with no relay URL guessed, no autostart, and only sourced/approved facts; unknown fields remain explicit review items.
-- [ ] Import current Hermes pubkeys/profile references and observed memberships without copying prompts, models, tools, keys, or starting processes.
-- [ ] Validate every seed against the typed schema and prove no duplicated pubkey is rendered as a second identity.
-- [ ] Run seed validation and full focused backend/frontend tests.
-- [ ] Commit with `git commit -s -m "data(workforce): seed companies and Hermes identities"`.
+- [x] Generate existing-company records from the read-only live inventory, not remembered relay IDs.
+- [x] Seed Damen and DSRY as `draft` with no relay URL guessed, no autostart, and only sourced/approved facts; unknown fields remain explicit review items.
+- [x] Import current Hermes pubkeys/profile references and observed memberships without copying prompts, models, tools, keys, or starting processes.
+- [x] Validate every seed against the typed schema and prove no duplicated pubkey is rendered as a second identity.
+- [x] Run seed validation and full focused backend/frontend tests.
+- [x] Commit with `git commit -s -m "data(workforce): seed companies and Hermes identities"`.
 
 ## Task 10: Verify, canary, and stage the live rollout
 

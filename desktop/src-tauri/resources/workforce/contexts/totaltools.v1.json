@@ -1,0 +1,14 @@
+{
+  "companyId": "totaltools",
+  "version": 0,
+  "revision": 0,
+  "approvedAt": null,
+  "facts": [],
+  "documents": [],
+  "templates": {},
+  "reviewItems": [
+    "Approve the legal entity and business description.",
+    "Approve terminology, decision rights, policies, and authoritative data sources.",
+    "Health-check and approve each model route before canary activation."
+  ]
+}

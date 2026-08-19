@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-08-19T00:00:00Z",
+  "source": "read-only managed-agents inventory",
+  "companies": [
+    {
+      "companyId": "thommacclabs",
+      "displayName": "Thommacc Labs",
+      "relayUrl": "wss://thommacclabs.communities.buzz.xyz",
+      "contextRef": "contexts/thommacclabs.v1.json",
+      "defaultLanguage": "nl",
+      "rolloutState": "active",
+      "employeeMembershipSource": "all 35 role-catalog identities observed on this relay",
+      "startOnAppLaunch": false
+    },
+    {
+      "companyId": "totaltools",
+      "displayName": "TotalTools",
+      "relayUrl": "wss://totaltools.communities.buzz.xyz",
+      "contextRef": "contexts/totaltools.v1.json",
+      "defaultLanguage": "nl",
+      "rolloutState": "active",
+      "employeeMembershipSource": "all 35 role-catalog identities observed on this relay",
+      "startOnAppLaunch": false
+    },
+    {
+      "companyId": "vanderhilst",
+      "displayName": "Van der Hilst",
+      "relayUrl": "wss://vanderhilst.communities.buzz.xyz",
+      "contextRef": "contexts/vanderhilst.v1.json",
+      "defaultLanguage": "nl",
+      "rolloutState": "active",
+      "employeeMembershipSource": "all 35 role-catalog identities observed on this relay",
+      "startOnAppLaunch": false
+    },
+    {
+      "companyId": "damen",
+      "displayName": "Damen",
+      "relayUrl": null,
+      "contextRef": "contexts/damen.v1.json",
+      "defaultLanguage": "nl",
+      "rolloutState": "draft",
+      "employeeMembershipSource": "none until reviewed",
+      "startOnAppLaunch": false
+    },
+    {
+      "companyId": "dsry",
+      "displayName": "DSRY",
+      "relayUrl": null,
+      "contextRef": "contexts/dsry.v1.json",
+      "defaultLanguage": "en",
+      "rolloutState": "draft",
+      "employeeMembershipSource": "none until reviewed",
+      "startOnAppLaunch": false
+    }
+  ]
+}

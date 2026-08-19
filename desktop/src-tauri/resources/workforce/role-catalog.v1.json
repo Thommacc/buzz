@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "catalogVersion": 1,
   "observedAt": "2026-08-19T00:00:00Z",
+  "sourceNote": "Role identities and model names were observed in the local Buzz store. Rashid's 2026-08-09 email 'Here's your 35 AI Employees list' confirms the 35-role concept and recommends selecting only relevant roles plus business context; no email content is injected as company context.",
   "roles": [
     {
       "identityId": "billie-billing",

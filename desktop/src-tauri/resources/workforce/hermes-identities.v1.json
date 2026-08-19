@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-08-19T00:00:00Z",
+  "source": "read-only managed-agents inventory",
+  "identities": [
+    {
+      "identityId": "hermes-carolien",
+      "displayName": "Hermes Carolien",
+      "pubkey": "db1f7a93dc6c034a72a46c0a946335267796d0b10bb45c4784b8e4e41de96005",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:carolien",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-default",
+      "displayName": "Hermes Default / Atlas",
+      "pubkey": "bee66e80871c39c31497e502e863436ed25b995c6c80bcb7b7123131b64c53da",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:default",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-dimos",
+      "displayName": "Hermes Dimos",
+      "pubkey": "0cd5f9e75e0d1c9a19354d0742e97e9b78d34e8058594fe2289993398eec7a56",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:dimos",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-jarvis",
+      "displayName": "Hermes Jarvis",
+      "pubkey": "d30b5a3a3a43d8bdf939d8bb9854f9edbaa8fc3ecbadb2275709881232d0ea88",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:jarvis",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-lyra",
+      "displayName": "Hermes Lyra",
+      "pubkey": "63d335970b32c78104af104f22e58df0b1e62a1f263e9ffc48a572df694a1d7c",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:lyra",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-nova",
+      "displayName": "Hermes Nova",
+      "pubkey": "d2bd427de7e830dca4c27d5a70173d9410678dbb48ba4d2912fc37d96a3b3125",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:nova",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-ray",
+      "displayName": "Hermes Ray",
+      "pubkey": "271ffbdd4fbf304977ed1b3cf1269eda894cfeb520b72ef414b8d4e4e34a0b6b",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:ray",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-sophie",
+      "displayName": "Hermes Sophie",
+      "pubkey": "f767a88ab06c0cdcc36e3dd1b2fd00dfedb06dd6aa0dfb616c773a7aada40f84",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:sophie",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    },
+    {
+      "identityId": "hermes-steven",
+      "displayName": "Hermes Steven",
+      "pubkey": "3af445ac34ff6fda37f6a611ffe415b14aef01e71e5c1b1db1f2f74d769ec8da",
+      "kind": "hermes",
+      "hermesProfileRef": "dimos:hermes:steven",
+      "referenceOnly": true,
+      "observedCommunityIds": ["thommacclabs", "totaltools", "vanderhilst"]
+    }
+  ]
+}

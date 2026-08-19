@@ -43,7 +43,7 @@ struct CompanyRegistry {
 struct Company {
     company_id: String,
     display_name: String,
-    relay_url: String,
+    relay_url: Option<String>,
     context_ref: String,
     #[serde(default = "default_language")]
     default_language: String,
@@ -203,7 +203,12 @@ fn migrate(
     let relay_companies: BTreeMap<String, &Company> = registry
         .companies
         .iter()
-        .map(|company| (normalize_relay(&company.relay_url), company))
+        .filter_map(|company| {
+            company
+                .relay_url
+                .as_deref()
+                .map(|relay| (normalize_relay(relay), company))
+        })
         .collect();
     let mut remove = BTreeSet::new();
     let mut stats = Stats::default();
@@ -342,7 +347,7 @@ fn ensure_community(workforce: &mut Value, company: &Company) -> Result<()> {
     communities.push(json!({
         "companyId": company.company_id,
         "displayName": company.display_name,
-        "relayUrl": company.relay_url,
+        "relayUrl": company.relay_url.as_deref(),
         "contextRef": company.context_ref,
         "defaultLanguage": company.default_language,
         "owners": [], "approvers": [],
