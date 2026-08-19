@@ -1,7 +1,7 @@
 # Multi-Community AI Workforce Design
 
 Date: 2026-08-19
-Status: Approved design, pending implementation plan
+Status: Approved design with Hermes membership extension, pending final review
 
 ## Problem
 
@@ -20,6 +20,8 @@ memory, model policy, and current work remain isolated.
 
 - Keep exactly one logical identity, name, avatar, and role prompt per AI
   employee.
+- Allow Thom's existing Hermes agents to join any registered community as
+  their existing identities, without cloning their profiles or runtimes.
 - Allow each identity to be a member of any number of Buzz communities.
 - Select company context from the authenticated community boundary rather
   than from text supplied by a user or model.
@@ -41,6 +43,9 @@ memory, model policy, and current work remain isolated.
 - Share conversation memory or private documents between companies.
 - Start every employee automatically when a community is added.
 - Replace Hermes or move the workforce into Hermes internals.
+- Rewrite Hermes agent personalities, tools, or fixed runtime defaults as part
+  of community onboarding.
+- Automatically add or start every Hermes agent in every community.
 - Redesign unrelated Buzz messaging, relay, or mobile behavior.
 
 ## Recommended Architecture
@@ -65,6 +70,12 @@ The catalog contains one record for each of the 35 reusable roles:
 
 The role prompt never contains company-specific facts.
 
+Hermes agents remain a separate identity class from the 35 employee roles.
+They retain their existing profile, name, avatar, tools, model policy, and
+runtime ownership. The workforce control plane stores only their stable
+identity reference and community memberships; it does not copy or replace a
+Hermes profile.
+
 ### 2. Community Registry
 
 The registry contains one record per company:
@@ -72,7 +83,7 @@ The registry contains one record per company:
 - stable `company_id`;
 - Buzz community name and authenticated relay URL;
 - company-context reference;
-- enabled roles;
+- enabled employee roles and enabled Hermes identities;
 - membership and connector status;
 - default language and model policy;
 - owners and approvers;
@@ -105,6 +116,11 @@ into prompts.
 One logical employee can hold memberships in multiple communities. The gateway
 maintains the required relay connections without exposing each connection as a
 separate employee to the user.
+
+The same membership mechanism applies to Hermes agents. Atlas, Nova, Lyra, or
+another registered Hermes identity can be enabled in a community while keeping
+one public identity and one underlying Hermes profile. Community connectors are
+transport bindings, not cloned Hermes agents.
 
 For every inbound request the gateway:
 
@@ -168,6 +184,11 @@ lists its role, department, enabled communities, default model, overrides,
 runtime health, and last canary result. Technical relay connectors are not
 rendered as employees.
 
+The directory has a separate Hermes section. Each Hermes agent appears once
+with its enabled communities and live runtime health. Thom can add or remove an
+existing Hermes identity from a community without editing its profile or
+creating another visible agent card.
+
 ## Data Isolation and Security
 
 - The authenticated relay/community mapping is the tenant boundary.
@@ -202,25 +223,31 @@ rendered as employees.
 2. Build and test the catalog, registry, context packages, and resolver without
    changing live Buzz state.
 3. Import the existing 35 AI employee definitions as unique logical identities.
-4. Import Thommacc Labs, TotalTools, and Van der Hilst as registry entries while
+4. Import the existing Hermes identity registry and its current community
+   memberships without restarting a healthy Hermes service.
+5. Import Thommacc Labs, TotalTools, and Van der Hilst as registry entries while
    preserving their data and permissions.
-5. Add draft entries for Damen and DSRY; create or join their communities only
+6. Add draft entries for Damen and DSRY; create or join their communities only
    after exact relay and ownership preflight.
-6. Canary one low-risk employee in one existing community, proving identity,
+7. Canary one low-risk employee in one existing community, proving identity,
    context isolation, model routing, and reply attribution.
-7. Canary the same identity in a second company and prove that no context or
+8. Canary the same identity in a second company and prove that no context or
    memory crosses the boundary.
-8. Activate Damen and DSRY one at a time with autostart disabled for all other
+9. Canary one existing Hermes identity in a second community without changing
+   or restarting its healthy base runtime.
+10. Activate Damen and DSRY one at a time with autostart disabled for all other
    employees.
-9. Replace duplicate employee presentation only after rollback evidence and
+11. Replace duplicate employee presentation only after rollback evidence and
    cross-community canaries pass.
-10. Preserve the previous store and receipts as rollback artifacts until Thom
+12. Preserve the previous store and receipts as rollback artifacts until Thom
     accepts the completed rollout.
 
 ## Verification Criteria
 
 - The global directory contains 35 logical AI employees, not 35 multiplied by
   the number of companies.
+- Every registered Hermes agent appears once, regardless of the number of
+  community memberships.
 - One test identity has the same public key, name, and avatar in at least two
   communities.
 - DSRY and Damen each load their own approved profile automatically.
@@ -232,6 +259,9 @@ rendered as employees.
   tested.
 - New company onboarding requires registry and context data only, with no
   source-code relay list edit.
+- Thom can add a selected existing Hermes identity to Damen or DSRY without
+  cloning its profile, changing its base model, or exposing another company's
+  memory.
 - New communities and employees remain stopped until their canary is approved.
 - Existing Buzz, WSL, Hermes, and current healthy agents remain available
   throughout staged verification.
@@ -239,6 +269,8 @@ rendered as employees.
 ## Accepted Product Decisions
 
 - One AI identity can work in several companies.
+- Any existing Hermes identity can be granted membership in any registered
+  community while remaining one agent with one profile.
 - An employee keeps one name, face, and general profession across communities.
 - Company context and memory are automatically selected from the authenticated
   community.
