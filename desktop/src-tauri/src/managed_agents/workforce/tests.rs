@@ -136,6 +136,7 @@ fn approved_context_excludes_untrusted_facts() {
     let context = CompanyContext {
         company_id: "acme".into(),
         version: 4,
+        revision: 4,
         approved_at: Some("2026-08-19T00:00:00Z".into()),
         facts: vec![
             ContextFact {

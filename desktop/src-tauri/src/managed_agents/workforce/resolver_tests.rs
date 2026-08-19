@@ -49,6 +49,7 @@ fn fixture() -> (WorkforceStore, CompanyContext) {
     let context = CompanyContext {
         company_id: "acme".into(),
         version: 3,
+        revision: 3,
         approved_at: Some("2026-08-19T00:00:00Z".into()),
         facts: vec![
             ContextFact {

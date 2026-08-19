@@ -17,6 +17,7 @@ fn empty_context() -> CompanyContext {
     CompanyContext {
         company_id: "acme".into(),
         version: 0,
+        revision: 0,
         approved_at: None,
         facts: Vec::new(),
         documents: Vec::new(),

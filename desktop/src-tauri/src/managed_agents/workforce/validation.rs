@@ -21,6 +21,10 @@ pub enum WorkforceValidationError {
         company_id: String,
         identity_id: String,
     },
+    InvalidIdentifier {
+        field: String,
+        value: String,
+    },
     InvalidRelayUrl {
         company_id: String,
         reason: String,
@@ -64,6 +68,7 @@ impl WorkforceStore {
         let mut pubkeys = HashSet::new();
         let mut role_ids = HashSet::new();
         for identity in &self.identities {
+            validate_identifier("identityId", &identity.identity_id)?;
             if !identity_ids.insert(identity.identity_id.as_str()) {
                 return Err(WorkforceValidationError::DuplicateIdentityId(
                     identity.identity_id.clone(),
@@ -88,6 +93,7 @@ impl WorkforceStore {
                             identity.identity_id.clone(),
                         )
                     })?;
+                    validate_identifier("roleId", &role.role_id)?;
                     if identity.hermes_profile_ref.is_some()
                         || role.role_id.trim().is_empty()
                         || !role_ids.insert(role.role_id.as_str())
@@ -115,6 +121,7 @@ impl WorkforceStore {
         let mut company_ids = HashSet::new();
         let mut communities_by_relay = HashMap::new();
         for community in &self.communities {
+            validate_identifier("companyId", &community.company_id)?;
             if !company_ids.insert(community.company_id.as_str()) {
                 return Err(WorkforceValidationError::DuplicateCompanyId(
                     community.company_id.clone(),
@@ -172,6 +179,21 @@ impl WorkforceStore {
 
         Ok(ValidatedWorkforce {
             communities_by_relay,
+        })
+    }
+}
+
+pub fn validate_identifier(field: &str, value: &str) -> Result<(), WorkforceValidationError> {
+    let valid = !value.is_empty()
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-');
+    if valid {
+        Ok(())
+    } else {
+        Err(WorkforceValidationError::InvalidIdentifier {
+            field: field.into(),
+            value: value.into(),
         })
     }
 }

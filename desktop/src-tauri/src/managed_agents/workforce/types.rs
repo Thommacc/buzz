@@ -139,6 +139,8 @@ pub struct CommunityMembership {
 pub struct CompanyContext {
     pub company_id: String,
     pub version: u64,
+    #[serde(default)]
+    pub revision: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub approved_at: Option<String>,
     #[serde(default)]
@@ -171,6 +173,7 @@ impl CompanyContext {
             return Err(format!("fact {:?} already exists", fact.fact_id));
         }
         self.facts.push(fact);
+        self.revision = self.revision.saturating_add(1);
         Ok(())
     }
 
@@ -189,6 +192,7 @@ impl CompanyContext {
             reviewed_at: reviewed_at.into(),
         };
         self.version = self.version.saturating_add(1);
+        self.revision = self.revision.saturating_add(1);
         self.approved_at = Some(reviewed_at.into());
         Ok(())
     }
@@ -209,6 +213,7 @@ impl CompanyContext {
             reviewed_at: reviewed_at.into(),
             reason: reason.into(),
         };
+        self.revision = self.revision.saturating_add(1);
         Ok(())
     }
 
@@ -236,6 +241,7 @@ impl CompanyContext {
             superseded_at: superseded_at.into(),
         };
         self.version = self.version.saturating_add(1);
+        self.revision = self.revision.saturating_add(1);
         self.approved_at = Some(superseded_at.into());
         Ok(())
     }

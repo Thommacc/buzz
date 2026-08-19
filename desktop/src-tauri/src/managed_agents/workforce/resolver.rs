@@ -190,7 +190,7 @@ pub fn resolve_workforce_execution(
     }
 }
 
-fn validate_model_route(route: &ModelRoute) -> Result<(), String> {
+pub fn validate_model_route(route: &ModelRoute) -> Result<(), String> {
     if route.provider.trim().is_empty() || route.model.trim().is_empty() {
         return Err("workforce model route must contain a provider and model".into());
     }

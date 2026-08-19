@@ -33,6 +33,24 @@ pub fn save_company_context(app: &AppHandle, context: &CompanyContext) -> Result
     )
 }
 
+pub fn ensure_company_context(app: &AppHandle, company_id: &str) -> Result<CompanyContext, String> {
+    let path = company_context_path(app, company_id, false)?;
+    if path.exists() {
+        return load_company_context_from_path(&path, company_id);
+    }
+    let context = CompanyContext {
+        company_id: company_id.into(),
+        version: 0,
+        revision: 0,
+        approved_at: None,
+        facts: Vec::new(),
+        documents: Vec::new(),
+        templates: Default::default(),
+    };
+    save_company_context(app, &context)?;
+    Ok(context)
+}
+
 pub fn resolve_workforce_execution_for_app(
     app: &AppHandle,
     pubkey: &str,

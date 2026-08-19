@@ -99,11 +99,11 @@
 - Modify: `desktop/src/shared/api/types.ts`
 - Create: `desktop/src/features/agents/workforceHooks.ts`
 
-- [ ] Write Rust command tests for list/read, upsert draft community, membership enable/disable, context proposal/approval, company override, and task override validation.
-- [ ] Expose only redacted summaries to the frontend; no nsecs, connector credentials, or unapproved context bodies in list responses.
-- [ ] Add TypeScript request/response types and query/mutation hooks with invalidation of agents, runtimes, and workforce summaries.
-- [ ] Add an optimistic-concurrency version to mutations so stale edits cannot overwrite newer approvals.
-- [ ] Run the focused Rust tests and `pnpm --dir desktop typecheck`.
+- [x] Write Rust command tests for list/read, upsert draft community, membership enable/disable, context proposal/approval, company override, and task override validation.
+- [x] Expose only redacted summaries to the frontend; no nsecs, connector credentials, or unapproved context bodies in list responses.
+- [x] Add TypeScript request/response types and query/mutation hooks with invalidation of agents, runtimes, and workforce summaries.
+- [x] Add an optimistic-concurrency version to mutations so stale edits cannot overwrite newer approvals.
+- [x] Run the focused Rust tests and `pnpm --dir desktop typecheck`.
 - [ ] Commit with `git commit -s -m "feat(workforce): expose community control API"`.
 
 ## Task 6: Render one identity and manage its communities
