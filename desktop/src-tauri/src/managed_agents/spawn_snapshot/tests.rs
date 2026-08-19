@@ -936,3 +936,64 @@ fn openclaw_cap_crossing_parallelism_snapshots_differ() {
 #[cfg(test)]
 #[path = "tests_ext.rs"]
 mod ext;
+
+#[test]
+fn spawn_snapshot_changes_with_workforce_context_or_route() {
+    use crate::managed_agents::workforce::{
+        ModelRoute, ModelRouteHealth, ResolvedWorkforceExecution, WorkforceModelSource,
+    };
+
+    let r = record();
+    let workforce = ResolvedWorkforceExecution {
+        company_id: "acme".into(),
+        identity_id: "faye".into(),
+        role_id: Some("finance-controller".into()),
+        hermes_profile_ref: None,
+        workforce_revision: 1,
+        context_version: 2,
+        role_version: Some(3),
+        system_prompt: Some("not logged, but hashed separately".into()),
+        model: Some(ModelRoute {
+            provider: "openai".into(),
+            model: "model-a".into(),
+            purpose_label: "Finance".into(),
+            approved: true,
+            health: ModelRouteHealth::Healthy,
+            last_health_check_at: "2026-08-19T00:00:00Z".into(),
+        }),
+        model_source: Some(WorkforceModelSource::CompanyOverride),
+        role_hash: Some("role-hash".into()),
+        context_hash: "context-hash-a".into(),
+        prompt_hash: Some("prompt-hash-a".into()),
+    };
+    let mut changed = workforce.clone();
+    changed.context_version = 3;
+    changed.context_hash = "context-hash-b".into();
+    changed.model.as_mut().expect("model").model = "model-b".into();
+
+    let baseline =
+        prospective_spawn_config_snapshot(&r, &[], &[], "ws://relay", &Default::default(), false)
+            .canonical();
+    let first = prospective_spawn_config_snapshot_with_workforce(
+        &r,
+        &[],
+        &[],
+        "ws://relay",
+        &Default::default(),
+        false,
+        Some(&workforce),
+    )
+    .canonical();
+    let second = prospective_spawn_config_snapshot_with_workforce(
+        &r,
+        &[],
+        &[],
+        "ws://relay",
+        &Default::default(),
+        false,
+        Some(&changed),
+    )
+    .canonical();
+    assert_ne!(baseline, first);
+    assert_ne!(first, second);
+}

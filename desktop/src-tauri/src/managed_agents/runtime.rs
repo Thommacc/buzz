@@ -247,14 +247,25 @@ pub fn build_managed_agent_summary(
     // The prospective side is computed only for a tracked pair: an unstamped
     // agent has nothing to compare against.
     let tracked_spawn = pair_key.as_ref().zip(pair_runtime).map(|(key, runtime)| {
-        let current = crate::managed_agents::spawn_snapshot::prospective_spawn_config_snapshot(
-            record,
-            personas,
-            teams,
+        let workforce = crate::managed_agents::workforce::resolve_workforce_execution_for_app(
+            app,
+            &record.pubkey,
             &key.relay_url,
-            global_config,
-            super::owner_only_access_build(),
-        );
+            None,
+            None,
+        )
+        .ok()
+        .flatten();
+        let current =
+            crate::managed_agents::spawn_snapshot::prospective_spawn_config_snapshot_with_workforce(
+                record,
+                personas,
+                teams,
+                &key.relay_url,
+                global_config,
+                super::owner_only_access_build(),
+                workforce.as_ref(),
+            );
         (runtime, current)
     });
     let restart_diff = crate::managed_agents::spawn_snapshot::eligible_restart_diff(
@@ -457,6 +468,18 @@ pub fn spawn_agent_child(
                     crate::managed_agents::user_facing_harness_error(&e)
                 )
             })?;
+    // Workforce mode is opt-in per stable pubkey. Legacy records retain their
+    // existing prompt/model behavior. Once enrolled, the authenticated pair
+    // relay is the only company selector; missing membership/context refuses
+    // before log creation or process spawn.
+    let workforce_execution =
+        crate::managed_agents::workforce::resolve_workforce_execution_for_app(
+            app,
+            &record.pubkey,
+            &runtime_key.relay_url,
+            None,
+            None,
+        )?;
     let effective_command = &descriptor.command;
     let agent_args = &descriptor.args;
 
@@ -707,9 +730,21 @@ pub fn spawn_agent_child(
     // spawn semantics in lock-step (see `EffectiveAgentConfig::relay_mesh_model_id`).
     #[cfg(feature = "mesh-llm")]
     let mesh_model_id = effective_cfg.relay_mesh_model_id();
-    let effective_prompt = effective_cfg.system_prompt.value;
-    let effective_model = effective_cfg.model.value;
-    let effective_provider = effective_cfg.provider.value;
+    let mut effective_prompt = effective_cfg.system_prompt.value;
+    let mut effective_model = effective_cfg.model.value;
+    let mut effective_provider = effective_cfg.provider.value;
+    if let Some(workforce) = &workforce_execution {
+        // Hermes entries are reference-only and intentionally carry neither a
+        // replacement prompt nor model. Employee entries replace all three as
+        // one resolved company-scoped unit.
+        if let Some(prompt) = &workforce.system_prompt {
+            effective_prompt = Some(prompt.clone());
+        }
+        if let Some(model) = &workforce.model {
+            effective_model = Some(model.model.clone());
+            effective_provider = Some(model.provider.clone());
+        }
+    }
 
     if let Some(prompt) = &effective_prompt {
         command.env("BUZZ_ACP_SYSTEM_PROMPT", prompt);
@@ -809,18 +844,57 @@ pub fn spawn_agent_child(
     for (key, value) in &descriptor.env {
         command.env(key, value);
     }
+    if let Some(workforce) = &workforce_execution {
+        command.env("BUZZ_WORKFORCE_COMPANY_ID", &workforce.company_id);
+        command.env("BUZZ_WORKFORCE_IDENTITY_ID", &workforce.identity_id);
+        command.env(
+            "BUZZ_WORKFORCE_CONTEXT_VERSION",
+            workforce.context_version.to_string(),
+        );
+        command.env("BUZZ_WORKFORCE_CONTEXT_HASH", &workforce.context_hash);
+        if let Some(role_version) = workforce.role_version {
+            command.env("BUZZ_WORKFORCE_ROLE_VERSION", role_version.to_string());
+        } else {
+            command.env_remove("BUZZ_WORKFORCE_ROLE_VERSION");
+        }
+        if let Some(role_hash) = &workforce.role_hash {
+            command.env("BUZZ_WORKFORCE_ROLE_HASH", role_hash);
+        } else {
+            command.env_remove("BUZZ_WORKFORCE_ROLE_HASH");
+        }
+        if let Some(profile_ref) = &workforce.hermes_profile_ref {
+            command.env("BUZZ_WORKFORCE_HERMES_PROFILE_REF", profile_ref);
+        } else {
+            command.env_remove("BUZZ_WORKFORCE_HERMES_PROFILE_REF");
+        }
+        // User env is intentionally written before this block. Enrolled
+        // employee prompt/model selection is a trusted tenant-bound result and
+        // cannot be shadowed by a saved BUZZ_ACP_* behavior knob.
+        if let Some(prompt) = &workforce.system_prompt {
+            command.env("BUZZ_ACP_SYSTEM_PROMPT", prompt);
+        }
+        if let Some(model) = &workforce.model {
+            command.env("BUZZ_ACP_MODEL", &model.model);
+            if let Some(meta) = runtime_meta {
+                for (key, value) in runtime_metadata_env_vars(
+                    meta.model_env_var,
+                    meta.provider_env_var,
+                    meta.provider_locked,
+                    Some(&model.model),
+                    Some(&model.provider),
+                ) {
+                    command.env(key, value);
+                }
+            }
+        }
+    }
 
     // B5: carry persisted effort; harness resolves thought_level configId at first session.
-    // Written AFTER descriptor.env so the canonical persisted value wins over any
-    // user-supplied BUZZ_ACP_EFFORT_LEVEL entry, mirroring the A1 model-authority pattern
-    // (ANTHROPIC_MODEL is applied post-loop for the same reason). When effort_level is
-    // None there is no canonical value to assert, so env passthrough stands — user env
-    // legitimately seeds startup effort in that case.
+    // Written after descriptor.env so the canonical persisted value wins.
     apply_effort_env(&mut command, record.effort_level.as_deref());
 
-    // A1: for local claude agents, ANTHROPIC_MODEL is the single startup model authority.
-    // BUZZ_ACP_MODEL is removed (live ACP switches only; two authorities in the same env
-    // would be ambiguous).
+    // A1: for local Claude agents, ANTHROPIC_MODEL is the single startup model
+    // authority. `effective_model` already includes any trusted workforce route.
     if record.backend == super::BackendKind::Local && runtime_meta.is_some_and(|r| r.id == "claude")
     {
         apply_claude_model_env(&mut command, effective_model.as_deref());
@@ -860,6 +934,7 @@ pub fn spawn_agent_child(
             system_prompt: effective_prompt.as_deref(),
             model: effective_model.as_deref(),
             provider: effective_provider.as_deref(),
+            workforce: workforce_execution.as_ref(),
             enforced_owner_only: super::owner_only_access_build(),
         },
     );

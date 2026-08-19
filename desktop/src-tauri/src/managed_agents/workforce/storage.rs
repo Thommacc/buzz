@@ -3,19 +3,19 @@ use std::path::{Path, PathBuf};
 
 use tauri::AppHandle;
 
-use super::{CompanyContext, WorkforceStore};
+use super::{CompanyContext, ModelRoute, ResolvedWorkforceExecution, WorkforceStore};
 
 const WORKFORCE_FILE: &str = "workforce.json";
 
 pub fn workforce_base_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let path = super::super::managed_agents_base_dir(app)?.join("workforce");
+    let path = workforce_base_path(app)?;
     fs::create_dir_all(path.join("contexts"))
         .map_err(|error| format!("failed to create workforce directories: {error}"))?;
     Ok(path)
 }
 
 pub fn load_workforce(app: &AppHandle) -> Result<WorkforceStore, String> {
-    load_workforce_from_path(&workforce_base_dir(app)?.join(WORKFORCE_FILE))
+    load_workforce_from_path(&workforce_base_path(app)?.join(WORKFORCE_FILE))
 }
 
 pub fn save_workforce(app: &AppHandle, store: &WorkforceStore) -> Result<(), String> {
@@ -23,20 +23,68 @@ pub fn save_workforce(app: &AppHandle, store: &WorkforceStore) -> Result<(), Str
 }
 
 pub fn load_company_context(app: &AppHandle, company_id: &str) -> Result<CompanyContext, String> {
-    load_company_context_from_path(&company_context_path(app, company_id)?, company_id)
+    load_company_context_from_path(&company_context_path(app, company_id, false)?, company_id)
 }
 
 pub fn save_company_context(app: &AppHandle, context: &CompanyContext) -> Result<(), String> {
-    save_company_context_to_path(&company_context_path(app, &context.company_id)?, context)
+    save_company_context_to_path(
+        &company_context_path(app, &context.company_id, true)?,
+        context,
+    )
 }
 
-fn company_context_path(app: &AppHandle, company_id: &str) -> Result<PathBuf, String> {
+pub fn resolve_workforce_execution_for_app(
+    app: &AppHandle,
+    pubkey: &str,
+    authenticated_relay_url: &str,
+    task_model_override: Option<&ModelRoute>,
+    task_constraints: Option<&str>,
+) -> Result<Option<ResolvedWorkforceExecution>, String> {
+    let store = load_workforce(app)?;
+    if !store
+        .identities
+        .iter()
+        .any(|identity| identity.pubkey.eq_ignore_ascii_case(pubkey))
+    {
+        return Ok(None);
+    }
+    let validated = store
+        .validate()
+        .map_err(|error| format!("workforce validation failed: {error}"))?;
+    let community = validated
+        .community_for_relay(authenticated_relay_url)
+        .ok_or_else(|| {
+            "authenticated relay is not an active workforce community for this identity".to_string()
+        })?;
+    let context = load_company_context(app, &community.company_id)?;
+    super::resolve_workforce_execution(
+        &store,
+        pubkey,
+        authenticated_relay_url,
+        Some(&context),
+        task_model_override,
+        task_constraints,
+    )
+}
+
+fn workforce_base_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(super::super::managed_agents_base_dir(app)?.join("workforce"))
+}
+
+fn company_context_path(
+    app: &AppHandle,
+    company_id: &str,
+    create: bool,
+) -> Result<PathBuf, String> {
     if !safe_id(company_id) {
         return Err(format!("invalid company id {company_id:?}"));
     }
-    Ok(workforce_base_dir(app)?
-        .join("contexts")
-        .join(format!("{company_id}.json")))
+    let base = if create {
+        workforce_base_dir(app)?
+    } else {
+        workforce_base_path(app)?
+    };
+    Ok(base.join("contexts").join(format!("{company_id}.json")))
 }
 
 fn safe_id(value: &str) -> bool {

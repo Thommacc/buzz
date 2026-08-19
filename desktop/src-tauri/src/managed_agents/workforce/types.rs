@@ -63,12 +63,23 @@ pub struct EmployeeRole {
     pub last_verified_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelRoute {
     pub provider: String,
     pub model: String,
     pub purpose_label: String,
+    pub approved: bool,
+    pub health: ModelRouteHealth,
+    pub last_health_check_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum ModelRouteHealth {
+    Healthy,
+    Unhealthy,
+    Unknown,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

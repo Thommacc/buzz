@@ -62,14 +62,14 @@
 - Modify: `desktop/src-tauri/src/managed_agents/spawn_hash.rs`
 - Modify: `desktop/src-tauri/src/managed_agents/runtime/tests.rs`
 
-- [ ] Write failing tests proving that the canonical runtime relay selects the company, an unknown/disabled/non-member relay refuses before process side effects, and company text cannot switch the resolved company.
-- [ ] Write failing tests for prompt order: immutable guardrails, general role prompt, approved company context, company-local references, then task constraints; verify proposed/rejected facts and secrets are absent.
-- [ ] Write failing tests for model precedence: explicit task override, company-role override, role default, and fail-closed when no approved healthy route exists.
-- [ ] Add `ResolvedWorkforceExecution` with company/context/role versions and hashes suitable for receipts without logging prompt text or secrets.
-- [ ] Call the resolver once in `spawn_agent_child`, then emit the composed prompt/model while retaining current behavior for identities not yet enrolled in workforce mode.
-- [ ] Include the workforce resolution in `spawn_config_hash` so a context or model-policy change produces an accurate restart-needed signal.
-- [ ] Run the focused `managed_agents::workforce`, `managed_agents::runtime`, and `managed_agents::spawn_hash` tests with `cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib <filter>`.
-- [ ] Commit with `git commit -s -m "feat(workforce): resolve community context at spawn"`.
+- [x] Write failing tests proving that the canonical runtime relay selects the company, an unknown/disabled/non-member relay refuses before process side effects, and company text cannot switch the resolved company.
+- [x] Write failing tests for prompt order: immutable guardrails, general role prompt, approved company context, company-local references, then task constraints; verify proposed/rejected facts and secrets are absent.
+- [x] Write failing tests for model precedence: explicit task override, company-role override, role default, and fail-closed when no approved healthy route exists.
+- [x] Add `ResolvedWorkforceExecution` with company/context/role versions and hashes suitable for receipts without logging prompt text or secrets.
+- [x] Call the resolver once in `spawn_agent_child`, then emit the composed prompt/model while retaining current behavior for identities not yet enrolled in workforce mode.
+- [x] Include the workforce resolution in `spawn_config_hash` so a context or model-policy change produces an accurate restart-needed signal.
+- [x] Run the focused `managed_agents::workforce`, `managed_agents::runtime`, and `managed_agents::spawn_hash` tests with `cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib <filter>`.
+- [x] Commit with `git commit -s -m "feat(workforce): resolve community context at spawn"`.
 
 ## Task 4: Make community membership control runtime fan-out
 

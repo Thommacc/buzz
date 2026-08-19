@@ -7,6 +7,9 @@ fn model(model: &str) -> ModelRoute {
         provider: "openai".into(),
         model: model.into(),
         purpose_label: "General work".into(),
+        approved: true,
+        health: ModelRouteHealth::Healthy,
+        last_health_check_at: "2026-08-19T00:00:00Z".into(),
     }
 }
 

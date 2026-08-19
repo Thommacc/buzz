@@ -73,9 +73,43 @@ pub(crate) struct SpawnConfigInputs<'a> {
     pub system_prompt: Option<&'a str>,
     pub model: Option<&'a str>,
     pub provider: Option<&'a str>,
+    pub workforce: Option<&'a super::workforce::ResolvedWorkforceExecution>,
     /// Compile-time distribution capability projected at this runtime boundary.
     /// The stored record remains portable; only effective spawned access is stamped.
     pub enforced_owner_only: bool,
+}
+
+#[derive(Clone, Serialize)]
+pub(crate) struct WorkforceSpawnSnapshot {
+    pub company_id: String,
+    pub identity_id: String,
+    pub role_id: Option<String>,
+    pub hermes_profile_ref: Option<String>,
+    pub workforce_revision: u64,
+    pub context_version: u64,
+    pub role_version: Option<u32>,
+    pub model_source: Option<super::workforce::WorkforceModelSource>,
+    pub role_hash: Option<String>,
+    pub context_hash: String,
+    pub prompt_hash: Option<String>,
+}
+
+impl From<&super::workforce::ResolvedWorkforceExecution> for WorkforceSpawnSnapshot {
+    fn from(value: &super::workforce::ResolvedWorkforceExecution) -> Self {
+        Self {
+            company_id: value.company_id.clone(),
+            identity_id: value.identity_id.clone(),
+            role_id: value.role_id.clone(),
+            hermes_profile_ref: value.hermes_profile_ref.clone(),
+            workforce_revision: value.workforce_revision,
+            context_version: value.context_version,
+            role_version: value.role_version,
+            model_source: value.model_source.clone(),
+            role_hash: value.role_hash.clone(),
+            context_hash: value.context_hash.clone(),
+            prompt_hash: value.prompt_hash.clone(),
+        }
+    }
 }
 
 /// The effective spawn configuration of one managed-agent process.
@@ -111,6 +145,9 @@ pub(crate) struct SpawnConfigSnapshot {
     pub system_prompt: Option<String>,
     pub model: Option<String>,
     pub provider: Option<String>,
+    /// Tenant-bound workforce routing metadata. Prompt text remains represented
+    /// by `system_prompt`; only hashes and public routing identifiers live here.
+    pub workforce: Option<WorkforceSpawnSnapshot>,
     /// `None` when a user env override shadows `BUZZ_ACP_SESSION_TITLE`: spawn
     /// writes the title BEFORE the user env layer, so the override is what
     /// actually runs and it already reaches this snapshot through `env`.
@@ -165,6 +202,7 @@ impl SpawnConfigSnapshot {
             system_prompt,
             model,
             provider,
+            workforce,
             enforced_owner_only,
         } = inputs;
         let (respond_to, respond_to_allowlist) =
@@ -193,6 +231,7 @@ impl SpawnConfigSnapshot {
             system_prompt: system_prompt.map(str::to_string),
             model: model.map(str::to_string),
             provider: provider.map(str::to_string),
+            workforce: workforce.map(WorkforceSpawnSnapshot::from),
             session_title: (!descriptor.env.contains_key(SESSION_TITLE_ENV_VAR))
                 .then(|| resolve_session_title(record.display_name.as_deref(), &record.name))
                 .flatten(),
@@ -260,6 +299,26 @@ pub(crate) fn prospective_spawn_config_snapshot(
     global: &GlobalAgentConfig,
     enforced_owner_only: bool,
 ) -> SpawnConfigSnapshot {
+    prospective_spawn_config_snapshot_with_workforce(
+        record,
+        personas,
+        teams,
+        workspace_relay,
+        global,
+        enforced_owner_only,
+        None,
+    )
+}
+
+pub(crate) fn prospective_spawn_config_snapshot_with_workforce(
+    record: &ManagedAgentRecord,
+    personas: &[AgentDefinition],
+    teams: &[TeamRecord],
+    workspace_relay: &str,
+    global: &GlobalAgentConfig,
+    enforced_owner_only: bool,
+    workforce: Option<&super::workforce::ResolvedWorkforceExecution>,
+) -> SpawnConfigSnapshot {
     // Prospective re-snapshot: apply the same `apply_persona_snapshot` the
     // start/restore paths run right before spawning, so this describes what a
     // restart would actually run. Idempotent, so a spawn-time stamp taken
@@ -308,6 +367,7 @@ pub(crate) fn prospective_spawn_config_snapshot(
         system_prompt: prompt.as_deref(),
         model: model.as_deref(),
         provider: provider.as_deref(),
+        workforce,
         enforced_owner_only,
     })
 }

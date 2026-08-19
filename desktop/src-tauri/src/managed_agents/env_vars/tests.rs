@@ -198,6 +198,23 @@ fn reserved_keys_include_relay_url() {
     assert!(merged.is_empty());
 }
 
+#[test]
+fn reserved_keys_include_workforce_tenant_binding() {
+    for key in [
+        "BUZZ_WORKFORCE_COMPANY_ID",
+        "BUZZ_WORKFORCE_IDENTITY_ID",
+        "BUZZ_WORKFORCE_CONTEXT_VERSION",
+        "BUZZ_WORKFORCE_CONTEXT_HASH",
+        "BUZZ_WORKFORCE_ROLE_VERSION",
+        "BUZZ_WORKFORCE_ROLE_HASH",
+        "BUZZ_WORKFORCE_HERMES_PROFILE_REF",
+    ] {
+        assert!(is_reserved_env_key(key), "{key} should be reserved");
+        let agent = map(&[(key, "spoofed")]);
+        assert!(merged_user_env(&BTreeMap::new(), &agent).is_empty());
+    }
+}
+
 // ── validate_user_env_keys ─────────────────────────────────────────
 
 #[test]

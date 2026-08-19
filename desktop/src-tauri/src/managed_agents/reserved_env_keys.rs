@@ -73,6 +73,15 @@ pub(crate) const RESERVED_ENV_KEYS: &[&str] = &[
     // for same-session sweep decisions.
     "BUZZ_MANAGED_AGENT",
     "BUZZ_MANAGED_AGENT_START_NONCE",
+    // Workforce tenant binding: these values come only from the authenticated
+    // relay and approved workforce store. Saved env must not spoof them.
+    "BUZZ_WORKFORCE_COMPANY_ID",
+    "BUZZ_WORKFORCE_IDENTITY_ID",
+    "BUZZ_WORKFORCE_CONTEXT_VERSION",
+    "BUZZ_WORKFORCE_CONTEXT_HASH",
+    "BUZZ_WORKFORCE_ROLE_VERSION",
+    "BUZZ_WORKFORCE_ROLE_HASH",
+    "BUZZ_WORKFORCE_HERMES_PROFILE_REF",
 ];
 
 pub(crate) fn is_reserved_env_key(key: &str) -> bool {
