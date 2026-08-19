@@ -144,6 +144,97 @@ impl CompanyContext {
             .iter()
             .filter(|fact| matches!(fact.status, ContextFactStatus::Approved { .. }))
     }
+
+    pub fn propose_fact(&mut self, fact: ContextFact) -> Result<(), String> {
+        if !matches!(fact.status, ContextFactStatus::Proposed) {
+            return Err("new context facts must start as proposed".into());
+        }
+        if fact.confidence_basis_points > 10_000 {
+            return Err("fact confidence cannot exceed 10000 basis points".into());
+        }
+        if self
+            .facts
+            .iter()
+            .any(|existing| existing.fact_id == fact.fact_id)
+        {
+            return Err(format!("fact {:?} already exists", fact.fact_id));
+        }
+        self.facts.push(fact);
+        Ok(())
+    }
+
+    pub fn approve_fact(
+        &mut self,
+        fact_id: &str,
+        reviewer: &str,
+        reviewed_at: &str,
+    ) -> Result<(), String> {
+        let fact = self.fact_mut(fact_id)?;
+        if !matches!(fact.status, ContextFactStatus::Proposed) {
+            return Err(format!("fact {fact_id:?} is not proposed"));
+        }
+        fact.status = ContextFactStatus::Approved {
+            reviewer: reviewer.into(),
+            reviewed_at: reviewed_at.into(),
+        };
+        self.version = self.version.saturating_add(1);
+        self.approved_at = Some(reviewed_at.into());
+        Ok(())
+    }
+
+    pub fn reject_fact(
+        &mut self,
+        fact_id: &str,
+        reviewer: &str,
+        reviewed_at: &str,
+        reason: &str,
+    ) -> Result<(), String> {
+        let fact = self.fact_mut(fact_id)?;
+        if !matches!(fact.status, ContextFactStatus::Proposed) {
+            return Err(format!("fact {fact_id:?} is not proposed"));
+        }
+        fact.status = ContextFactStatus::Rejected {
+            reviewer: reviewer.into(),
+            reviewed_at: reviewed_at.into(),
+            reason: reason.into(),
+        };
+        Ok(())
+    }
+
+    pub fn supersede_fact(
+        &mut self,
+        fact_id: &str,
+        replacement_fact_id: &str,
+        superseded_at: &str,
+    ) -> Result<(), String> {
+        let replacement_is_approved = self.facts.iter().any(|fact| {
+            fact.fact_id == replacement_fact_id
+                && matches!(fact.status, ContextFactStatus::Approved { .. })
+        });
+        if !replacement_is_approved {
+            return Err(format!(
+                "replacement fact {replacement_fact_id:?} is not approved"
+            ));
+        }
+        let fact = self.fact_mut(fact_id)?;
+        if !matches!(fact.status, ContextFactStatus::Approved { .. }) {
+            return Err(format!("fact {fact_id:?} is not approved"));
+        }
+        fact.status = ContextFactStatus::Superseded {
+            replacement_fact_id: replacement_fact_id.into(),
+            superseded_at: superseded_at.into(),
+        };
+        self.version = self.version.saturating_add(1);
+        self.approved_at = Some(superseded_at.into());
+        Ok(())
+    }
+
+    fn fact_mut(&mut self, fact_id: &str) -> Result<&mut ContextFact, String> {
+        self.facts
+            .iter_mut()
+            .find(|fact| fact.fact_id == fact_id)
+            .ok_or_else(|| format!("fact {fact_id:?} not found"))
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

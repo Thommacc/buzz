@@ -45,12 +45,12 @@
 - Modify: `desktop/src-tauri/src/managed_agents/workforce/mod.rs`
 - Modify: `desktop/src-tauri/src/managed_agents/storage.rs`
 
-- [ ] Write failing tests for missing-store defaults, invalid JSON evidence preservation, atomic save, `0o600` permissions on Unix, last-approved-version fallback, proposal approval, rejection, supersession, and monotonic context versions.
-- [ ] Store control-plane data at `agents/workforce/workforce.json` and context packages at `agents/workforce/contexts/<company_id>.json`; use temp-file plus rename semantics matching the managed-agent store.
-- [ ] Implement proposal and approval operations that keep source, timestamp, reviewer, confidence, and status, and inject only approved non-superseded facts.
-- [ ] Ensure failed writes retain the previous approved version and surface a diagnostic.
-- [ ] Run `cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib managed_agents::workforce`.
-- [ ] Commit with `git commit -s -m "feat(workforce): persist approved company context"`.
+- [x] Write failing tests for missing-store defaults, invalid JSON evidence preservation, atomic save, `0o600` permissions on Unix, last-approved-version fallback, proposal approval, rejection, supersession, and monotonic context versions.
+- [x] Store control-plane data at `agents/workforce/workforce.json` and context packages at `agents/workforce/contexts/<company_id>.json`; use temp-file plus rename semantics matching the managed-agent store.
+- [x] Implement proposal and approval operations that keep source, timestamp, reviewer, confidence, and status, and inject only approved non-superseded facts.
+- [x] Ensure failed writes retain the previous approved version and surface a diagnostic.
+- [x] Run `cargo test --manifest-path desktop/src-tauri/Cargo.toml --lib managed_agents::workforce`.
+- [x] Commit with `git commit -s -m "feat(workforce): persist approved company context"`.
 
 ## Task 3: Resolve membership, prompt layers, and model precedence
 
