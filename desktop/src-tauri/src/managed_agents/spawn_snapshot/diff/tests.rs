@@ -1,4 +1,5 @@
 use super::*;
+use crate::managed_agents::spawn_snapshot::WorkforceSpawnSnapshot;
 use std::collections::{BTreeMap, BTreeSet};
 
 const SECRET: &str = "sk-live-SENTINEL-0000";
@@ -21,6 +22,19 @@ fn base() -> SpawnConfigSnapshot {
         system_prompt: Some("You are a test agent.".into()),
         model: Some("gpt-5".into()),
         provider: Some("openai".into()),
+        workforce: Some(WorkforceSpawnSnapshot {
+            company_id: "acme".into(),
+            identity_id: "faye".into(),
+            role_id: Some("finance".into()),
+            hermes_profile_ref: None,
+            workforce_revision: 1,
+            context_version: 2,
+            role_version: Some(3),
+            model_source: None,
+            role_hash: Some("role-hash".into()),
+            context_hash: "context-hash".into(),
+            prompt_hash: Some("prompt-hash".into()),
+        }),
         session_title: Some("Fizz".into()),
         auth_tag: Some("tag-abcdefgh".into()),
         respond_to: "owner-only".into(),
@@ -62,6 +76,7 @@ fn mutations() -> Vec<Mutation> {
         ("system_prompt", |s| s.system_prompt = None),
         ("model", |s| s.model = None),
         ("provider", |s| s.provider = None),
+        ("workforce", |s| s.workforce = None),
         ("session_title", |s| s.session_title = None),
         ("auth_tag", |s| s.auth_tag = None),
         ("respond_to", |s| s.respond_to = "anyone".into()),

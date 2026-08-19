@@ -147,8 +147,8 @@
 
 **Files:**
 
-- Create: `desktop/src-tauri/src/bin/buzz-workforce-migrate.rs`
-- Create: `desktop/src-tauri/tests/workforce_migration.rs`
+- Create: `crates/buzz-workforce-migrate/src/main.rs`
+- Create: `crates/buzz-workforce-migrate/tests/migration.rs`
 - Create: `docs/runbooks/workforce-migration.md`
 
 - [x] Write fixture-based tests for the current pattern: three records with the same pubkey/profile become one canonical managed-agent identity plus three memberships, with per-company model/context metadata preserved.

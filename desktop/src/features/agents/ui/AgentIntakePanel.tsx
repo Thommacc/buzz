@@ -6,22 +6,23 @@ import {
   type RoleCatalogEntry,
 } from "@/features/agents/intake/roleIntake";
 import { useWorkforceQuery } from "@/features/agents/workforceHooks";
-import { useCommunities } from "@/features/communities/useCommunities";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 
-export function AgentIntakePanel() {
-  const { activeCommunity } = useCommunities();
+export function AgentIntakePanel({
+  activeRelayUrl,
+}: {
+  activeRelayUrl?: string;
+}) {
   const workforceQuery = useWorkforceQuery();
   const [task, setTask] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [submittedTask, setSubmittedTask] = React.useState("");
   const workforceCommunity = workforceQuery.data?.communities.find(
     (community) =>
-      community.relayUrl?.toLowerCase() ===
-      activeCommunity?.relayUrl.toLowerCase(),
+      community.relayUrl?.toLowerCase() === activeRelayUrl?.toLowerCase(),
   );
   const recommendation =
     submittedTask && workforceQuery.data && workforceCommunity

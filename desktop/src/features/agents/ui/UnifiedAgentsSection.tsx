@@ -26,6 +26,7 @@ import { PersonaActionsMenu } from "./PersonaActionsMenu";
 import { buildUnifiedGroups } from "./unifiedAgentGroups";
 
 type UnifiedAgentsSectionProps = {
+  activeRelayUrl?: string;
   defaultModel: string;
   actionErrorMessage: string | null;
   actionNoticeMessage: string | null;
@@ -69,6 +70,7 @@ export const IDENTITY_CARD_GRID_CLASS = `${AGENT_CARD_COLUMN_CLASS} ${AGENT_CARD
 
 export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
   const {
+    activeRelayUrl,
     actionErrorMessage,
     actionNoticeMessage,
     defaultModel,
@@ -155,7 +157,7 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
     >
       {isLoading ? <LoadingSkeleton /> : null}
 
-      <AgentIntakePanel />
+      <AgentIntakePanel activeRelayUrl={activeRelayUrl} />
       <AgentCommunityMemberships />
 
       {!isLoading ? (

@@ -17,13 +17,13 @@ starts, stops, or restarts Buzz, WSL, or Hermes itself.
 ```bash
 cd /home/thoma/buzz
 . ./bin/activate-hermit
-cargo build --manifest-path desktop/src-tauri/Cargo.toml --bin buzz-workforce-migrate
+cargo build -p buzz-workforce-migrate
 ```
 
 Set explicit paths for the copied stores used in rehearsal:
 
 ```bash
-MIGRATOR=desktop/src-tauri/target/debug/buzz-workforce-migrate
+MIGRATOR=target/debug/buzz-workforce-migrate
 MANAGED=/absolute/rehearsal/managed-agents.json
 WORKFORCE=/absolute/rehearsal/workforce.json
 CATALOG=desktop/src-tauri/resources/workforce/role-catalog.v1.json

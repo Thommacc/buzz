@@ -19,7 +19,7 @@ export function buildUnifiedGroups(
   agents: ManagedAgent[],
   isArchived: (pubkey: string) => boolean,
 ) {
-  const identities = dedupeManagedAgentsByPubkey(agents, isArchived);
+  const identities = dedupeManagedAgentsByPubkey(agents);
   const byPersonaId = new Map<string, ManagedAgent[]>();
   const ungrouped: ManagedAgent[] = [];
 
