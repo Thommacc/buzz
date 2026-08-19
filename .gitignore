@@ -63,6 +63,9 @@ identity.key
 # Claude Code worktrees
 .claude/worktrees/
 
+# Local Superpowers worktrees
+.worktrees/
+
 # mesh-llm build cache
 .cache/
 
