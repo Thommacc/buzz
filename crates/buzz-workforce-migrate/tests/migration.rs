@@ -106,6 +106,73 @@ fn conflicts_and_running_receipts_refuse_without_writes() {
     assert!(!receipt.exists());
 }
 
+#[test]
+fn legacy_records_without_persona_id_deduplicate_by_display_name() {
+    let temp = tempdir().expect("tempdir");
+    let managed = temp.path().join("managed-agents.json");
+    let workforce = temp.path().join("workforce.json");
+    let catalog = temp.path().join("catalog.json");
+    let registry = temp.path().join("companies.json");
+    let receipt = temp.path().join("receipt.json");
+    write_fixture(&managed, &catalog, &registry, false);
+
+    let mut records: Vec<Value> = read_json(&managed);
+    for record in &mut records {
+        record["persona_id"] = Value::Null;
+        record["display_name"] = json!("Billie Billing");
+    }
+    fs::write(&managed, serde_json::to_vec_pretty(&records).unwrap()).unwrap();
+
+    let applied = migrate(&managed, &workforce, &catalog, &registry, &receipt, true);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    let migrated_managed: Vec<Value> = read_json(&managed);
+    assert_eq!(migrated_managed.len(), 1);
+    let migrated_workforce: Value = read_json(&workforce);
+    assert_eq!(migrated_workforce["identities"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn already_migrated_identity_cleans_empty_legacy_runtime_duplicates() {
+    let temp = tempdir().expect("tempdir");
+    let managed = temp.path().join("managed-agents.json");
+    let workforce = temp.path().join("workforce.json");
+    let catalog = temp.path().join("catalog.json");
+    let registry = temp.path().join("companies.json");
+    let receipt = temp.path().join("receipt.json");
+    write_fixture(&managed, &catalog, &registry, false);
+
+    let mut records: Vec<Value> = read_json(&managed);
+    for record in &mut records {
+        record["persona_id"] = Value::Null;
+        record["display_name"] = json!("Billie Billing");
+        record["pubkey"] = json!("");
+        record["relay_url"] = json!("");
+    }
+    records[0]["persona_id"] = json!("persona-billing");
+    records[0]["pubkey"] = json!("aa");
+    records[0]["relay_url"] = json!("wss://one.example");
+    records.push(records[1].clone());
+    fs::write(&managed, serde_json::to_vec_pretty(&records).unwrap()).unwrap();
+    fs::write(
+        &workforce,
+        serde_json::to_vec_pretty(&json!({
+            "schemaVersion": 1,
+            "revision": 1,
+            "identities": [{"identityId":"billie-billing","pubkey":"aa"}],
+            "communities": []
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+
+    let applied = migrate(&managed, &workforce, &catalog, &registry, &receipt, true);
+    assert!(applied.status.success(), "{}", stderr(&applied));
+    let migrated_managed: Vec<Value> = read_json(&managed);
+    assert_eq!(migrated_managed.len(), 1);
+    assert_eq!(migrated_managed[0]["display_name"], "Billie Billing");
+    assert_eq!(migrated_managed[0]["persona_id"], "persona-billing");
+}
+
 fn migrate(
     managed: &Path,
     workforce: &Path,

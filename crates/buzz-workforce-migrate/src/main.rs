@@ -214,14 +214,55 @@ fn migrate(
     let mut stats = Stats::default();
 
     for role in &catalog.roles {
-        let indices: Vec<usize> = managed
+        let mut indices: Vec<usize> = managed
             .iter()
             .enumerate()
-            .filter(|(_, record)| string(record, "persona_id") == Some(role.persona_id.as_str()))
+            .filter(|(_, record)| {
+                string(record, "persona_id") == Some(role.persona_id.as_str())
+                    || (string(record, "persona_id").is_none()
+                        && (string(record, "display_name")
+                            .or_else(|| string(record, "name"))
+                            == Some(role.display_name.as_str())))
+            })
             .map(|(index, _)| index)
             .collect();
         if indices.is_empty() {
             continue;
+        }
+        let identity_exists = workforce["identities"]
+            .as_array()
+            .is_some_and(|identities| {
+                identities
+                    .iter()
+                    .any(|identity| string(identity, "identityId") == Some(&role.identity_id))
+            });
+        let empty_legacy_indices: Vec<usize> = indices
+            .iter()
+            .copied()
+            .filter(|index| {
+                let record = &managed[*index];
+                string(record, "persona_id").is_none()
+                    && string(record, "pubkey") == Some("")
+                    && string(record, "relay_url") == Some("")
+            })
+            .collect();
+        if identity_exists && !empty_legacy_indices.is_empty() {
+            let empty_legacy_set: BTreeSet<usize> = empty_legacy_indices.iter().copied().collect();
+            let canonical_indices: Vec<usize> = indices
+                .iter()
+                .copied()
+                .filter(|index| !empty_legacy_set.contains(index))
+                .collect();
+            if canonical_indices.is_empty() {
+                for index in empty_legacy_indices.iter().skip(1) {
+                    remove.insert(*index);
+                }
+                continue;
+            }
+            for index in empty_legacy_indices {
+                remove.insert(index);
+            }
+            indices = canonical_indices;
         }
         let records: Vec<&Value> = indices.iter().map(|index| &managed[*index]).collect();
         let conflict_count = conflicts.len();
