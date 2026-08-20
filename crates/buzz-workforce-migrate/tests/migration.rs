@@ -31,6 +31,8 @@ fn three_company_records_migrate_idempotently_and_rollback_byte_exactly() {
     let migrated_managed: Vec<Value> = read_json(&managed);
     assert_eq!(migrated_managed.len(), 1);
     assert_eq!(migrated_managed[0]["runtime_pid"], Value::Null);
+    assert_eq!(migrated_managed[0]["idle_timeout_seconds"], 600);
+    assert_eq!(migrated_managed[0]["max_turn_duration_seconds"], 900);
     let migrated_workforce: Value = read_json(&workforce);
     assert_eq!(
         migrated_workforce["identities"].as_array().unwrap().len(),
@@ -170,7 +172,11 @@ fn already_migrated_identity_cleans_empty_legacy_runtime_duplicates() {
     let migrated_managed: Vec<Value> = read_json(&managed);
     assert_eq!(migrated_managed.len(), 1);
     assert_eq!(migrated_managed[0]["display_name"], "Billie Billing");
-    assert_eq!(migrated_managed[0]["persona_id"], "persona-billing");
+    assert_eq!(migrated_managed[0]["persona_id"], Value::Null);
+    assert_eq!(
+        migrated_managed[0]["persona_source_version"],
+        Value::Null
+    );
 }
 
 fn migrate(
@@ -220,6 +226,8 @@ fn write_fixture(managed: &Path, catalog: &Path, registry: &Path, conflict: bool
             "avatar_url": "avatar.png",
             "provider": "openai",
             "model": model,
+            "idle_timeout_seconds": Value::Null,
+            "max_turn_duration_seconds": 900,
             "runtime_pid": if conflict && index == 2 { json!(42) } else { Value::Null }
         })
     })

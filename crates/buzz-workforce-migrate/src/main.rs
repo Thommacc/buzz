@@ -284,6 +284,24 @@ fn migrate(
             }
             upsert_company_route(workforce, company, role, record)?;
         }
+        drop(records);
+        // These imported employee records carry their complete runtime config
+        // on the instance itself. Their historical persona_id is the identity
+        // pubkey, not an entry in Buzz's persona catalog; keeping that link
+        // makes Buzz classify the otherwise runnable instance as orphaned and
+        // reject it with "Configuration missing".
+        managed[indices[0]]["persona_id"] = Value::Null;
+        managed[indices[0]]["persona_source_version"] = Value::Null;
+        // Buzz defaults a missing idle timeout to 900 seconds. The imported
+        // employee instances also pin max_turn_duration_seconds to 900, which
+        // the harness correctly rejects because idle must be strictly lower.
+        // Preserve explicit custom values and repair only the missing value.
+        if managed[indices[0]]
+            .get("idle_timeout_seconds")
+            .is_none_or(Value::is_null)
+        {
+            managed[indices[0]]["idle_timeout_seconds"] = Value::from(600);
+        }
         for index in indices.iter().skip(1) {
             remove.insert(*index);
         }
