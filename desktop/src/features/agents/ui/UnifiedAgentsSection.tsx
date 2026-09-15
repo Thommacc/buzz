@@ -6,7 +6,9 @@ import {
   resolveAgentCardAvatarUrl,
 } from "@/features/agents/lib/agentCardAvatar";
 import { resolveAgentCardModelLabel } from "@/features/agents/lib/agentCardModelLabel";
+import { effectiveAgentDescription } from "@/features/agents/lib/agentDescription";
 import { friendlyAgentLastError } from "@/features/agents/lib/friendlyAgentLastError";
+import type { AgentAvailabilityReader } from "@/features/agents/lib/useAgentAvailability";
 import { isManagedAgentActive } from "@/features/agents/lib/managedAgentControlActions";
 import { pickProfileAgent } from "@/features/agents/lib/pickProfileAgent";
 import { useIsArchivedPredicate } from "@/features/identity-archive/hooks";
@@ -16,6 +18,10 @@ import type { AgentPersona, ManagedAgent } from "@/shared/api/types";
 import type { ProfilePanelOpenOptions } from "@/shared/context/ProfilePanelContext";
 import { useFeedbackToasts } from "@/shared/hooks/useToastEffect";
 import { Badge } from "@/shared/ui/badge";
+import {
+  ProtectedBestieCardBadge,
+  useProtectedBestiePubkey,
+} from "@protected-feature-components";
 import { IdentityCardSkeleton } from "@/shared/ui/identity-card-skeleton";
 import { AgentIdentityCard } from "./AgentIdentityCard";
 import { AgentCommunityMemberships } from "./AgentCommunityMemberships";
@@ -28,6 +34,7 @@ import { buildUnifiedGroups } from "./unifiedAgentGroups";
 type UnifiedAgentsSectionProps = {
   activeRelayUrl?: string;
   defaultModel: string;
+  getAvailability: AgentAvailabilityReader;
   actionErrorMessage: string | null;
   actionNoticeMessage: string | null;
   agents: ManagedAgent[];
@@ -74,6 +81,7 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
     actionErrorMessage,
     actionNoticeMessage,
     defaultModel,
+    getAvailability,
     agents,
     agentsError,
     isActionPending,
@@ -132,6 +140,7 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
     [personas, enrolledPersonaIds],
   );
 
+  const bestiePubkey = useProtectedBestiePubkey(agents)?.toLowerCase() ?? null;
   const { groups, ungrouped, unknown } = React.useMemo(
     () => buildUnifiedGroups(legacyPersonas, legacyAgents, isArchived),
     [legacyPersonas, legacyAgents, isArchived],
@@ -191,7 +200,9 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
                     />
                   )}
                   agent={profileAgent}
+                  getAvailability={getAvailability}
                   defaultModel={defaultModel}
+                  isBestie={profileAgent?.pubkey.toLowerCase() === bestiePubkey}
                   key={group.persona.id}
                   persona={group.persona}
                   restartingAgentPubkey={restartingAgentPubkey}
@@ -211,8 +222,10 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
             <CollapsibleAgentGroup
               agents={unknown}
               collapsed={collapsed}
+              getAvailability={getAvailability}
               defaultModel={defaultModel}
               groupKey="__unknown__"
+              bestiePubkey={bestiePubkey}
               label="Unknown agents"
               restartingAgentPubkey={restartingAgentPubkey}
               startingAgentPubkey={startingAgentPubkey}
@@ -226,8 +239,10 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
             <CollapsibleAgentGroup
               agents={ungrouped}
               collapsed={collapsed}
+              getAvailability={getAvailability}
               defaultModel={defaultModel}
               groupKey="__ungrouped__"
+              bestiePubkey={bestiePubkey}
               label="Custom agents"
               restartingAgentPubkey={restartingAgentPubkey}
               startingAgentPubkey={startingAgentPubkey}
@@ -262,6 +277,8 @@ function AgentPersonaCard({
   actions,
   agent,
   defaultModel,
+  isBestie,
+  getAvailability,
   persona,
   restartingAgentPubkey,
   startingAgentPubkey,
@@ -278,6 +295,8 @@ function AgentPersonaCard({
   ) => React.ReactNode;
   agent: ManagedAgent | undefined;
   defaultModel: string;
+  isBestie: boolean;
+  getAvailability: AgentAvailabilityReader;
   persona: AgentPersona;
   restartingAgentPubkey: string | null;
   startingAgentPubkey: string | null;
@@ -291,13 +310,18 @@ function AgentPersonaCard({
   onStartAgent: (pubkey: string) => void;
   onStartPersona: (persona: AgentPersona) => void;
 }) {
+  const availability = getAvailability(agent?.pubkey);
   const title = persona.displayName;
-  const modelLabel = resolveAgentCardModelLabel({
-    agent,
-    personaModel: persona.model,
-    provider: persona.provider,
-    defaultModel,
-  });
+  // Card face second line: the authored description when one exists;
+  // otherwise fall back to the model label as before.
+  const subtitle =
+    effectiveAgentDescription(persona) ??
+    resolveAgentCardModelLabel({
+      agent,
+      personaModel: persona.model,
+      provider: persona.provider,
+      defaultModel,
+    });
   const isActive = agent ? isManagedAgentActive(agent) : false;
   const profileQuery = useUserProfileQuery(agent?.pubkey);
   const avatarUrl = agent
@@ -322,6 +346,7 @@ function AgentPersonaCard({
             errorLabel={friendlyError}
             errorTestId={`agent-runtime-error-${agent.pubkey}`}
             isActive={isActive}
+            availability={availability}
             isRestarting={restartingAgentPubkey === agent.pubkey}
             isStarting={startingAgentPubkey === agent.pubkey}
             label={title}
@@ -350,8 +375,13 @@ function AgentPersonaCard({
       }
       avatarUrl={avatarUrl}
       dataTestId={`persona-agent-row-${persona.id}`}
+      footerAccessory={
+        agent ? (
+          <ProtectedBestieCardBadge agent={agent} isBestie={isBestie} />
+        ) : null
+      }
       label={title}
-      modelLabel={modelLabel}
+      subtitle={subtitle}
       onClick={() => {
         // The card's main click always opens the PERSONA target, never an
         // explicit pubkey. A pubkey target is durable in the panel, so a pick
@@ -378,7 +408,9 @@ function AgentPersonaCard({
 
 function StandaloneAgentCard({
   agent,
+  isBestie,
   defaultModel,
+  getAvailability,
   restartingAgentPubkey,
   startingAgentPubkey,
   onOpenAgentProfile,
@@ -386,7 +418,9 @@ function StandaloneAgentCard({
   onStartAgent,
 }: {
   agent: ManagedAgent;
+  isBestie: boolean;
   defaultModel: string;
+  getAvailability: AgentAvailabilityReader;
   restartingAgentPubkey: string | null;
   startingAgentPubkey: string | null;
   onOpenAgentProfile: (
@@ -396,6 +430,7 @@ function StandaloneAgentCard({
   onRestartAgent: (pubkey: string) => void;
   onStartAgent: (pubkey: string) => void;
 }) {
+  const availability = getAvailability(agent.pubkey);
   const title = agent.name;
   const profileQuery = useUserProfileQuery(agent.pubkey);
   const friendlyError = friendlyAgentLastError(
@@ -415,6 +450,7 @@ function StandaloneAgentCard({
           errorLabel={friendlyError}
           errorTestId={`agent-runtime-error-${agent.pubkey}`}
           isActive={isActive}
+          availability={availability}
           isRestarting={restartingAgentPubkey === agent.pubkey}
           isStarting={startingAgentPubkey === agent.pubkey}
           label={title}
@@ -432,13 +468,20 @@ function StandaloneAgentCard({
       }
       avatarUrl={profileQuery.data?.avatarUrl}
       dataTestId={`managed-agent-${agent.pubkey}`}
+      footerAccessory={
+        <ProtectedBestieCardBadge agent={agent} isBestie={isBestie} />
+      }
       label={title}
-      modelLabel={resolveAgentCardModelLabel({
-        agent,
-        personaModel: null,
-        provider: agent.provider,
-        defaultModel,
-      })}
+      subtitle={
+        // Definition-less instance: no authored description exists, so fall
+        // back to the model label.
+        resolveAgentCardModelLabel({
+          agent,
+          personaModel: null,
+          provider: agent.provider,
+          defaultModel,
+        })
+      }
       onClick={() => {
         onOpenAgentProfile(
           agent.pubkey,
@@ -480,8 +523,10 @@ function CollapsibleAgentGroup({
   groupKey,
   label,
   agents,
+  bestiePubkey,
   collapsed,
   defaultModel,
+  getAvailability,
   restartingAgentPubkey,
   startingAgentPubkey,
   onToggle,
@@ -492,8 +537,10 @@ function CollapsibleAgentGroup({
   groupKey: string;
   label: string;
   agents: ManagedAgent[];
+  bestiePubkey: string | null;
   collapsed: ReadonlySet<string>;
   defaultModel: string;
+  getAvailability: AgentAvailabilityReader;
   restartingAgentPubkey: string | null;
   startingAgentPubkey: string | null;
   onToggle: (key: string) => void;
@@ -525,7 +572,9 @@ function CollapsibleAgentGroup({
           {agents.map((agent) => (
             <StandaloneAgentCard
               agent={agent}
+              getAvailability={getAvailability}
               defaultModel={defaultModel}
+              isBestie={agent.pubkey.toLowerCase() === bestiePubkey}
               key={agent.pubkey}
               restartingAgentPubkey={restartingAgentPubkey}
               startingAgentPubkey={startingAgentPubkey}
