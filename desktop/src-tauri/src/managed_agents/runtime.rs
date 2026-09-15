@@ -777,9 +777,8 @@ pub fn spawn_agent_child(
     }
     workforce::apply_trusted_env(&mut command, workforce_execution.as_ref(), runtime_meta);
 
-    // B5: carry persisted effort; harness resolves thought_level configId at first session.
-    // Written after descriptor.env so the canonical persisted value wins.
-    apply_effort_env(&mut command, record.effort_level.as_deref());
+    // Upstream superseded the old `apply_effort_env` call: persisted effort now
+    // travels inside the ACP session policy stamped just below.
     // Resolve once and stamp the same value onto the environment and snapshot.
     let acp_session_policy = super::effective_acp_session_policy(record, &personas);
     super::apply_acp_session_policy_env(&mut command, acp_session_policy);
