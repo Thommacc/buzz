@@ -676,11 +676,82 @@ pub enum Provider {
 /// picks Responses for `*.openai.com`, Chat Completions otherwise, and
 /// permits a one-shot chat→responses upgrade on a "use /v1/responses"
 /// provider error.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OpenAiApi {
     Chat,
     Responses,
     Auto,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OpenAiCompatibleProviderPreset {
+    pub id: &'static str,
+    pub base_url: &'static str,
+    pub model: Option<&'static str>,
+    pub api_key: Option<&'static str>,
+    pub api: OpenAiApi,
+}
+
+/// Built-in local/OpenAI-compatible provider presets exposed by Buzz Desktop.
+///
+/// These are LLM routing presets, not agents. They all execute through the
+/// OpenAI-compatible transport but keep a stable provider id so new-agent flows
+/// can offer them directly instead of making the user recreate env vars.
+pub fn openai_compatible_provider_preset(
+    provider: Option<&str>,
+) -> Option<OpenAiCompatibleProviderPreset> {
+    match provider?.trim().to_ascii_lowercase().as_str() {
+        "ollama-desktop" => Some(OpenAiCompatibleProviderPreset {
+            id: "ollama-desktop",
+            base_url: "http://127.0.0.1:11434/v1",
+            model: Some("qwen3.6:27b-256k"),
+            api_key: Some("ollama"),
+            api: OpenAiApi::Chat,
+        }),
+        "ollama-spark" => Some(OpenAiCompatibleProviderPreset {
+            id: "ollama-spark",
+            base_url: "http://100.69.145.117:11434/v1",
+            model: Some("qwen3.6-35b-256k:latest"),
+            api_key: Some("ollama"),
+            api: OpenAiApi::Chat,
+        }),
+        "vllm-spark-qwen" | "vllm-spark-qwen36" => Some(OpenAiCompatibleProviderPreset {
+            id: "vllm-spark-qwen36",
+            base_url: "http://100.69.145.117:8000/v1",
+            model: Some("RedHatAI/Qwen3.6-35B-A3B-NVFP4"),
+            api_key: Some("EMPTY"),
+            api: OpenAiApi::Chat,
+        }),
+        "vllm-spark-dspark" => Some(OpenAiCompatibleProviderPreset {
+            id: "vllm-spark-dspark",
+            base_url: "http://100.69.145.117:8888/v1",
+            model: Some("deepseek-ai/DeepSeek-V4-Flash-DSpark"),
+            api_key: Some("EMPTY"),
+            api: OpenAiApi::Chat,
+        }),
+        "vllm-spark-laguna" => Some(OpenAiCompatibleProviderPreset {
+            id: "vllm-spark-laguna",
+            base_url: "http://100.69.145.117:8107/v1",
+            model: Some("poolside/Laguna-S-2.1-NVFP4-1M"),
+            api_key: Some("EMPTY"),
+            api: OpenAiApi::Chat,
+        }),
+        "nyx-local-api" => Some(OpenAiCompatibleProviderPreset {
+            id: "nyx-local-api",
+            base_url: "http://127.0.0.1:8970/v1",
+            model: Some("deepseek-v4-flash-dspark"),
+            api_key: None,
+            api: OpenAiApi::Chat,
+        }),
+        "nox-api" => Some(OpenAiCompatibleProviderPreset {
+            id: "nox-api",
+            base_url: "http://127.0.0.1:7870/v1",
+            model: Some("nox-claude-legacy"),
+            api_key: None,
+            api: OpenAiApi::Chat,
+        }),
+        _ => None,
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -742,8 +813,10 @@ impl Config {
     pub fn from_env() -> Result<Self, String> {
         let databricks_host = env("DATABRICKS_HOST");
         let databricks_model = env("DATABRICKS_MODEL");
+        let provider_raw = env("BUZZ_AGENT_PROVIDER");
+        let openai_preset = openai_compatible_provider_preset(provider_raw.as_deref());
         let provider = resolve_provider(
-            env("BUZZ_AGENT_PROVIDER").as_deref(),
+            provider_raw.as_deref(),
             env("ANTHROPIC_API_KEY").as_deref(),
             env("OPENAI_COMPAT_API_KEY").as_deref(),
         )?;
@@ -771,16 +844,28 @@ impl Config {
                 env_or("ANTHROPIC_BASE_URL", "https://api.anthropic.com"),
                 OpenAiApi::Auto, // unused for Anthropic
             ),
-            Provider::OpenAi => (
-                req("OPENAI_COMPAT_API_KEY")?,
-                resolve_model(
+            Provider::OpenAi => {
+                let preset_api_key = openai_preset.and_then(|preset| preset.api_key);
+                let preset_model = openai_preset.and_then(|preset| preset.model);
+                let api_key = env("OPENAI_COMPAT_API_KEY")
+                    .or_else(|| preset_api_key.map(str::to_string))
+                    .ok_or_else(|| "config: OPENAI_COMPAT_API_KEY required".to_string())?;
+                let model = resolve_model(
                     buzz_agent_model.as_deref(),
-                    env("OPENAI_COMPAT_MODEL").as_deref(),
+                    env("OPENAI_COMPAT_MODEL").as_deref().or(preset_model),
                 )
-                .ok_or_else(|| "config: OPENAI_COMPAT_MODEL required".to_string())?,
-                env_or("OPENAI_COMPAT_BASE_URL", "https://api.openai.com/v1"),
-                parse_openai_api(env("OPENAI_COMPAT_API").as_deref())?,
-            ),
+                .ok_or_else(|| "config: OPENAI_COMPAT_MODEL required".to_string())?;
+                let base_url = env("OPENAI_COMPAT_BASE_URL")
+                    .or_else(|| openai_preset.map(|preset| preset.base_url.to_string()))
+                    .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
+                let openai_api = match env("OPENAI_COMPAT_API") {
+                    Some(raw) => parse_openai_api(Some(raw.as_str()))?,
+                    None => openai_preset
+                        .map(|preset| preset.api)
+                        .unwrap_or(OpenAiApi::Auto),
+                };
+                (api_key, model, base_url, openai_api)
+            }
             Provider::Databricks | Provider::DatabricksV2 => (
                 env("DATABRICKS_TOKEN").unwrap_or_default(),
                 resolve_model(buzz_agent_model.as_deref(), databricks_model.as_deref())
@@ -997,13 +1082,20 @@ fn resolve_provider(
             let normalized = raw.to_ascii_lowercase();
             match normalized.as_str() {
                 "anthropic" if present_nonempty(anthropic_key) => Ok(Provider::Anthropic),
-                "anthropic" => Err(
-                    "config: ANTHROPIC_API_KEY required".into(),
-                ),
+                "anthropic" => Err("config: ANTHROPIC_API_KEY required".into()),
                 "openai" | "openai-compat" if present_nonempty(openai_key) => Ok(Provider::OpenAi),
-                "openai" | "openai-compat" => Err(
-                    "config: OPENAI_COMPAT_API_KEY required".into(),
-                ),
+                "openai" | "openai-compat" => Err("config: OPENAI_COMPAT_API_KEY required".into()),
+                value if openai_compatible_provider_preset(Some(value)).is_some()
+                    && (present_nonempty(openai_key)
+                        || openai_compatible_provider_preset(Some(value))
+                            .and_then(|preset| preset.api_key)
+                            .is_some()) =>
+                {
+                    Ok(Provider::OpenAi)
+                }
+                value if openai_compatible_provider_preset(Some(value)).is_some() => {
+                    Err("config: OPENAI_COMPAT_API_KEY required".into())
+                }
                 "databricks" => Ok(Provider::Databricks),
                 "databricks_v2" | "databricks-v2" => Ok(Provider::DatabricksV2),
                 _ => Err(format!(
@@ -1269,6 +1361,38 @@ mod tests {
     fn resolve_provider_unsupported_error_preserves_user_casing() {
         let err = resolve_provider(Some("OpenAIish"), None, None).unwrap_err();
         assert!(err.contains("BUZZ_AGENT_PROVIDER=OpenAIish"));
+    }
+
+    #[test]
+    fn local_openai_compatible_presets_resolve_as_openai() {
+        assert_eq!(
+            resolve_provider(Some("ollama-desktop"), None, None).unwrap(),
+            Provider::OpenAi
+        );
+        assert_eq!(
+            resolve_provider(Some("vllm-spark-qwen"), None, None).unwrap(),
+            Provider::OpenAi
+        );
+    }
+
+    #[test]
+    fn credentialless_local_presets_still_require_openai_key() {
+        let err = resolve_provider(Some("nyx-local-api"), None, None).unwrap_err();
+        assert!(err.contains("OPENAI_COMPAT_API_KEY required"), "{err}");
+        assert_eq!(
+            resolve_provider(Some("nyx-local-api"), None, Some("sk-local")).unwrap(),
+            Provider::OpenAi
+        );
+    }
+
+    #[test]
+    fn local_openai_compatible_preset_metadata_is_available_case_insensitively() {
+        let preset = openai_compatible_provider_preset(Some("  OLLAMA-SPARK  ")).unwrap();
+        assert_eq!(preset.id, "ollama-spark");
+        assert_eq!(preset.base_url, "http://100.69.145.117:11434/v1");
+        assert_eq!(preset.model, Some("qwen3.6-35b-256k:latest"));
+        assert_eq!(preset.api_key, Some("ollama"));
+        assert_eq!(preset.api, OpenAiApi::Chat);
     }
 
     #[test]

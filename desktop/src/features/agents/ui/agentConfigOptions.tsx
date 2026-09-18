@@ -40,8 +40,16 @@ const KNOWN_LLM_PROVIDER_IDS = [
   "anthropic",
   "databricks",
   "databricks_v2",
+  "nox-api",
+  "nyx-local-api",
+  "ollama-desktop",
+  "ollama-spark",
   "openai",
   "openai-compat",
+  "vllm-spark-dspark",
+  "vllm-spark-laguna",
+  "vllm-spark-qwen",
+  "vllm-spark-qwen36",
 ] as const;
 
 type PersonaLlmProviderId = (typeof KNOWN_LLM_PROVIDER_IDS)[number];
@@ -95,6 +103,32 @@ const PROVIDER_CREDENTIAL_CONFIG: Partial<
     requiredEnvKeys: ["OPENAI_COMPAT_API_KEY"],
     secretEnvVar: "OPENAI_COMPAT_API_KEY",
   },
+  "nox-api": {
+    requiredEnvKeys: ["OPENAI_COMPAT_API_KEY"],
+    secretEnvVar: "OPENAI_COMPAT_API_KEY",
+  },
+  "nyx-local-api": {
+    requiredEnvKeys: ["OPENAI_COMPAT_API_KEY"],
+    secretEnvVar: "OPENAI_COMPAT_API_KEY",
+  },
+  "ollama-desktop": {
+    requiredEnvKeys: [],
+  },
+  "ollama-spark": {
+    requiredEnvKeys: [],
+  },
+  "vllm-spark-qwen": {
+    requiredEnvKeys: [],
+  },
+  "vllm-spark-qwen36": {
+    requiredEnvKeys: [],
+  },
+  "vllm-spark-dspark": {
+    requiredEnvKeys: [],
+  },
+  "vllm-spark-laguna": {
+    requiredEnvKeys: [],
+  },
   databricks: {
     // DATABRICKS_TOKEN is NOT required — OAuth PKCE is the normal path.
     requiredEnvKeys: ["DATABRICKS_HOST"],
@@ -120,6 +154,13 @@ export const PERSONA_LLM_PROVIDER_OPTIONS: readonly PersonaModelOption[] = [
   { id: "anthropic", label: "Anthropic" },
   { id: "openai", label: "OpenAI" },
   { id: "openai-compat", label: "OpenAI-compatible" },
+  { id: "ollama-desktop", label: "Ollama Desktop" },
+  { id: "ollama-spark", label: "Ollama Spark" },
+  { id: "vllm-spark-qwen36", label: "Spark Qwen 3.6 (vLLM)" },
+  { id: "vllm-spark-dspark", label: "Spark DeepSeek DSpark (vLLM)" },
+  { id: "vllm-spark-laguna", label: "Spark Laguna S 2.1 (vLLM)" },
+  { id: "nyx-local-api", label: "Nyx Local API" },
+  { id: "nox-api", label: "Nox API" },
   { id: "relay-mesh", label: "Buzz shared compute" },
   { id: "databricks", label: "Databricks" },
   { id: "databricks_v2", label: "Databricks v2" },
@@ -276,6 +317,18 @@ export function providerRequiresExplicitModel(
   providerId: string | null | undefined,
 ) {
   const trimmedProvider = providerId?.trim() ?? "";
+  if (
+    trimmedProvider === "ollama-desktop" ||
+    trimmedProvider === "ollama-spark" ||
+    trimmedProvider === "vllm-spark-qwen" ||
+    trimmedProvider === "vllm-spark-qwen36" ||
+    trimmedProvider === "vllm-spark-dspark" ||
+    trimmedProvider === "vllm-spark-laguna" ||
+    trimmedProvider === "nyx-local-api" ||
+    trimmedProvider === "nox-api"
+  ) {
+    return false;
+  }
   return (
     trimmedProvider === "anthropic" ||
     trimmedProvider === "openai" ||

@@ -68,6 +68,14 @@ function providerModelEnvKey(provider: string): string | null {
       return "ANTHROPIC_MODEL";
     case "openai":
     case "openai-compat":
+    case "nox-api":
+    case "nyx-local-api":
+    case "ollama-desktop":
+    case "ollama-spark":
+    case "vllm-spark-dspark":
+    case "vllm-spark-laguna":
+    case "vllm-spark-qwen":
+    case "vllm-spark-qwen36":
       return "OPENAI_COMPAT_MODEL";
     default:
       return null;

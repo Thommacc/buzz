@@ -462,6 +462,7 @@ fn buzz_agent_requirements(effective: &EffectiveAgentEnv) -> Vec<Requirement> {
         .get("BUZZ_AGENT_PROVIDER")
         .filter(|v| !v.is_empty())
         .map(String::as_str);
+    let openai_preset = buzz_agent_pkg::config::openai_compatible_provider_preset(provider);
     if provider.is_none() {
         missing.push(Requirement::NormalizedField {
             field: "provider".to_string(),
@@ -481,6 +482,11 @@ fn buzz_agent_requirements(effective: &EffectiveAgentEnv) -> Vec<Requirement> {
         }
         Some("anthropic") => Some("ANTHROPIC_MODEL"),
         Some("openai") | Some("openai-compat") => Some("OPENAI_COMPAT_MODEL"),
+        Some(value)
+            if buzz_agent_pkg::config::openai_compatible_provider_preset(Some(value)).is_some() =>
+        {
+            Some("OPENAI_COMPAT_MODEL")
+        }
         _ => None,
     };
     let model_present = effective
@@ -491,7 +497,8 @@ fn buzz_agent_requirements(effective: &EffectiveAgentEnv) -> Vec<Requirement> {
         || provider_model_key
             .and_then(|k| effective.env.get(k))
             .filter(|v| !v.is_empty())
-            .is_some();
+            .is_some()
+        || openai_preset.and_then(|preset| preset.model).is_some();
     if !model_present {
         missing.push(Requirement::NormalizedField {
             field: "model".to_string(),
@@ -515,6 +522,15 @@ fn buzz_agent_requirements(effective: &EffectiveAgentEnv) -> Vec<Requirement> {
                     key: "OPENAI_COMPAT_API_KEY".to_string(),
                 });
             }
+        Some(value)
+            if buzz_agent_pkg::config::openai_compatible_provider_preset(Some(value))
+                .is_some_and(|preset| preset.api_key.is_none())
+                && env_key_missing("OPENAI_COMPAT_API_KEY") =>
+        {
+            missing.push(Requirement::EnvKey {
+                key: "OPENAI_COMPAT_API_KEY".to_string(),
+            });
+        }
         Some("databricks") | Some("databricks_v2") | Some("databricks-v2")
             // DATABRICKS_HOST is hard-required; DATABRICKS_TOKEN is optional
             // (OAuth PKCE is the normal path — see buzz-agent/src/config.rs:143).

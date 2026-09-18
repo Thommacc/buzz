@@ -389,13 +389,10 @@ struct OpenAiModelListItem {
 }
 
 fn is_openai_compatible_provider(provider: Option<&str>) -> bool {
-    matches!(
-        provider
-            .map(str::trim)
-            .map(str::to_ascii_lowercase)
-            .as_deref(),
-        Some("openai" | "openai-compat")
-    )
+    let normalized = provider.map(str::trim).map(str::to_ascii_lowercase);
+    matches!(normalized.as_deref(), Some("openai" | "openai-compat"))
+        || buzz_agent_pkg::config::openai_compatible_provider_preset(normalized.as_deref())
+            .is_some()
 }
 
 #[cfg(test)]
@@ -405,10 +402,31 @@ fn openai_compatible_models_url(env: &BTreeMap<String, String>) -> String {
     format!("{}/models", base_url.trim_end_matches('/'))
 }
 
-fn openai_compatible_models_url_for_discovery(env: &BTreeMap<String, String>) -> String {
+fn openai_compatible_models_url_for_discovery(
+    provider: Option<&str>,
+    env: &BTreeMap<String, String>,
+) -> String {
     let base_url = env_or_process_value(env, "OPENAI_COMPAT_BASE_URL")
+        .or_else(|| {
+            buzz_agent_pkg::config::openai_compatible_provider_preset(provider)
+                .map(|preset| preset.base_url.to_string())
+        })
         .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
     format!("{}/models", base_url.trim_end_matches('/'))
+}
+
+fn openai_compatible_api_key_for_discovery(
+    provider: &DiscoveryProvider,
+    env: &BTreeMap<String, String>,
+) -> Result<Option<String>, String> {
+    match provider.required_env(env, "OPENAI_COMPAT_API_KEY")? {
+        Some(api_key) => Ok(Some(api_key)),
+        None => Ok(
+            buzz_agent_pkg::config::openai_compatible_provider_preset(provider.as_deref())
+                .and_then(|preset| preset.api_key)
+                .map(str::to_string),
+        ),
+    }
 }
 
 fn is_agent_text_model_id(id: &str) -> bool {
@@ -542,7 +560,7 @@ async fn discover_openai_compatible_models(
     let api_key = if relay_mesh {
         crate::managed_agents::RELAY_MESH_API_KEY_PLACEHOLDER.to_string()
     } else {
-        match provider.required_env(env, "OPENAI_COMPAT_API_KEY")? {
+        match openai_compatible_api_key_for_discovery(provider, env)? {
             Some(api_key) => api_key,
             None => return Ok(None),
         }
@@ -551,7 +569,7 @@ async fn discover_openai_compatible_models(
     let url = if relay_mesh {
         format!("{}/models", crate::managed_agents::RELAY_MESH_API_BASE_URL)
     } else {
-        openai_compatible_models_url_for_discovery(env)
+        openai_compatible_models_url_for_discovery(provider.as_deref(), env)
     };
     let response = client
         .get(&url)
