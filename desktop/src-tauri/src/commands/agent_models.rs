@@ -461,9 +461,24 @@ fn title_case_model_suffix(value: &str) -> String {
         .collect::<String>()
 }
 
+/// True only for OpenAI's own API host.
+///
+/// A custom OpenAI-compatible base URL (a local vLLM/Ollama server, a gateway,
+/// …) serves arbitrary model ids, so OpenAI's catalogue name filter must not
+/// apply there. Without this check a local model such as
+/// `deepseek-v4-flash-dspark` is dropped as "not a text model" whenever the
+/// record still carries the `openai` provider id with a custom base URL.
+fn is_first_party_openai_base_url(base_url: &str) -> bool {
+    reqwest::Url::parse(base_url)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_ascii_lowercase))
+        .is_some_and(|host| host == "api.openai.com")
+}
+
 fn normalize_openai_compatible_models(
     response: OpenAiModelListResponse,
     provider: Option<&str>,
+    base_url: &str,
 ) -> Vec<AgentModelInfo> {
     let mut seen = HashSet::new();
     let mut items = response.data;
@@ -473,7 +488,7 @@ fn normalize_openai_compatible_models(
             .map(str::to_ascii_lowercase)
             .as_deref(),
         Some("openai")
-    );
+    ) && is_first_party_openai_base_url(base_url);
     let all_ids = items
         .iter()
         .map(|item| item.id.clone())
@@ -544,7 +559,7 @@ async fn discover_openai_compatible_models(
         .json::<OpenAiModelListResponse>()
         .await
         .map_err(|error| format!("OpenAI model discovery response parse failed: {error}"))?;
-    let models = normalize_openai_compatible_models(response, provider.as_deref());
+    let models = normalize_openai_compatible_models(response, provider.as_deref(), &url);
     if models.is_empty() {
         return Err("OpenAI model discovery returned no compatible text models".to_string());
     }

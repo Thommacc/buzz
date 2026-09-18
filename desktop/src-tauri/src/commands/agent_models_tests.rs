@@ -80,6 +80,7 @@ fn openai_model_normalization_keeps_agent_text_models() {
             ],
         },
         Some("openai"),
+        "https://api.openai.com/v1/models",
     );
 
     let ids_and_names = models
@@ -96,6 +97,50 @@ fn openai_model_normalization_keeps_agent_text_models() {
             ("o4-mini".to_string(), Some("o4-mini".to_string())),
             ("gpt-5.4-mini".to_string(), Some("GPT-5.4 mini".to_string()),),
         ]
+    );
+}
+
+#[test]
+fn first_party_openai_host_is_exact() {
+    assert!(is_first_party_openai_base_url(
+        "https://api.openai.com/v1/models"
+    ));
+    // Lookalike hosts must not enable the OpenAI catalogue filter.
+    assert!(!is_first_party_openai_base_url(
+        "https://api.openai.com.evil.example/v1/models"
+    ));
+    assert!(!is_first_party_openai_base_url(
+        "http://100.100.1.1:8888/v1/models"
+    ));
+    assert!(!is_first_party_openai_base_url("not a url"));
+}
+
+#[test]
+fn openai_provider_with_custom_base_url_keeps_local_model_ids() {
+    // Regression: a record that still uses the `openai` provider id but points
+    // at a local OpenAI-compatible base URL must not have its model list
+    // filtered down to the GPT/o/chatgpt names.
+    let models = normalize_openai_compatible_models(
+        OpenAiModelListResponse {
+            data: vec![
+                OpenAiModelListItem {
+                    id: "deepseek-v4-flash-dspark".to_string(),
+                    created: Some(2),
+                },
+                OpenAiModelListItem {
+                    id: "gpt-5.4-mini".to_string(),
+                    created: Some(1),
+                },
+            ],
+        },
+        Some("openai"),
+        "http://100.100.1.1:8888/v1/models",
+    );
+
+    let ids = models.into_iter().map(|model| model.id).collect::<Vec<_>>();
+    assert!(
+        ids.contains(&"deepseek-v4-flash-dspark".to_string()),
+        "local model id was filtered out: {ids:?}"
     );
 }
 
@@ -127,6 +172,7 @@ fn openai_compat_model_normalization_preserves_provider_specific_ids() {
             ],
         },
         Some("openai-compat"),
+        "https://example.test/v1/models",
     );
 
     let ids = models.into_iter().map(|model| model.id).collect::<Vec<_>>();
