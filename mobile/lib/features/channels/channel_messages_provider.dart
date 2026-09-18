@@ -2,10 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../shared/relay/relay.dart';
-import 'channel_management_provider.dart';
+import 'channel_event_order.dart';
 import 'pending_local_messages_provider.dart';
 import 'channel_window.dart';
 import 'thread_replies_provider.dart';
+
+const _channelLiveEventKinds = [
+  ...EventKind.channelEventKinds,
+  EventKind.channelThreadSummary,
+];
 
 /// Provides the message list for a specific channel. Registers a live
 /// subscription first, then syncs history via the server-assembled channel
@@ -17,8 +22,10 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
   bool _reachedOldest = false;
   bool _initInFlight = false;
   bool _usingChannelWindow = false;
+  bool _initialWindowQueryInFlight = false;
   int _initVersion = 0;
   ChannelWindowStore _windowStore = const ChannelWindowStore.empty();
+  final Set<String> _liveSummaryRootsDuringInitialWindowQuery = {};
   final Map<String, NostrEvent> _deepLinkEvents = {};
   final Set<String> _retainedDeepLinkEventIds = {};
 
@@ -27,6 +34,12 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
   /// Last successfully loaded messages, preserved across reconnections so the
   /// UI can show stale data instead of a blank loading spinner.
   List<NostrEvent>? _lastKnownMessages;
+
+  /// Whether this channel has completed at least one message history load.
+  ///
+  /// This distinguishes a genuinely loaded empty channel from the synthetic
+  /// empty value returned while the relay is not yet connected.
+  bool get hasLoadedMessages => _lastKnownMessages != null;
 
   Map<String, ChannelWindowThreadSummary> get threadSummaries =>
       channelWindowThreadSummaries(_windowStore);
@@ -42,12 +55,16 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
     if (sessionState.status != SessionStatus.connected) {
       _initVersion++;
       _initInFlight = false;
+      _initialWindowQueryInFlight = false;
+      _liveSummaryRootsDuringInitialWindowQuery.clear();
       return AsyncData(_lastKnownMessages ?? const []);
     }
 
     _reachedOldest = false;
     _windowStore = const ChannelWindowStore.empty();
     _usingChannelWindow = false;
+    _initialWindowQueryInFlight = false;
+    _liveSummaryRootsDuringInitialWindowQuery.clear();
     _init();
     if (_lastKnownMessages case final cached? when cached.isNotEmpty) {
       return AsyncData(cached);
@@ -65,7 +82,7 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
       try {
         final unsubscribe = await session.subscribe(
           NostrFilter(
-            kinds: EventKind.channelEventKinds,
+            kinds: _channelLiveEventKinds,
             tags: {
               '#h': [channelId],
             },
@@ -120,12 +137,21 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
     RelaySessionNotifier session,
   ) async {
     try {
+      _initialWindowQueryInFlight = true;
       final page = await _fetchWindowPage(session, null);
-      _windowStore = replaceNewestChannelWindow(_windowStore, page);
+      _initialWindowQueryInFlight = false;
+      _windowStore = replaceNewestChannelWindow(
+        _windowStore,
+        page,
+        retainLiveSummaryRootIds: _liveSummaryRootsDuringInitialWindowQuery,
+      );
+      _liveSummaryRootsDuringInitialWindowQuery.clear();
       _usingChannelWindow = true;
       _reachedOldest = !channelWindowHasMore(_windowStore);
       return flattenChannelWindowEvents(_windowStore);
     } catch (error) {
+      _initialWindowQueryInFlight = false;
+      _liveSummaryRootsDuringInitialWindowQuery.clear();
       debugPrint(
         '[ChannelMessagesNotifier] channel window unavailable for $channelId, falling back to WS history: $error',
       );
@@ -133,7 +159,7 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
       final history = await session.fetchHistory(
         NostrFilters.messages(channelId),
       );
-      history.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      history.sort(compareChannelTimelineEventsChronologically);
       return history;
     }
   }
@@ -162,6 +188,29 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
   );
 
   void _handleLiveEvent(NostrEvent event, {bool authoritative = true}) {
+    // Invalidate the thread query independently of the selected channel-history
+    // path. The websocket fallback does not merge through the window store.
+    _invalidateThreadReplies(event);
+    // A live summary can race the initial channel-window query. Buffer it in
+    // the window store even before that query installs its first page, rather
+    // than treating metadata as an ordinary websocket timeline event.
+    if (event.kind == EventKind.channelThreadSummary && !_usingChannelWindow) {
+      final rootId = _initialWindowQueryInFlight
+          ? event.getTagValue('e')
+          : null;
+      if (_mergeWindowEventIntoStore(event)) {
+        if (rootId != null) {
+          _liveSummaryRootsDuringInitialWindowQuery.add(rootId);
+        }
+        if (_initInFlight) return;
+        final current =
+            state.value ?? _lastKnownMessages ?? const <NostrEvent>[];
+        _lastKnownMessages = current;
+        state = AsyncData(current);
+      }
+      return;
+    }
+
     // Reply ownership and its thread-local overlay must transition together.
     // The authoritative thread query performs both confirmations after it
     // contains the reply; a live echo only triggers that query below.
@@ -176,20 +225,41 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
       _lastKnownMessages = merged;
       state = AsyncData(merged);
     }
-
-    if (event.kind == EventKind.systemMessage &&
-        _isMembershipEvent(event.content)) {
-      ref.invalidate(channelMembersProvider(channelId));
-    }
   }
 
   void _handleWindowLiveEvent(NostrEvent event) {
     if (!_mergeWindowEventIntoStore(event)) return;
-    final flattened = _withDeepLinkEvents(
-      flattenChannelWindowEvents(_windowStore),
-    );
+    final windowEvents = flattenChannelWindowEvents(_windowStore);
+    // Flattening already orders the window. Only merge and sort again when
+    // there are retained deep-link events to include.
+    final flattened = _deepLinkEvents.isEmpty
+        ? windowEvents
+        : _withDeepLinkEvents(windowEvents);
     _lastKnownMessages = flattened;
     state = AsyncData(flattened);
+  }
+
+  void _invalidateThreadReplies(NostrEvent event) {
+    if (!EventKind.channelTimelineContentKinds.contains(event.kind)) return;
+    final thread = event.threadReference;
+    if (thread.parentId == null) return;
+
+    final rootId = thread.rootId;
+    if (rootId != null) {
+      ref.invalidate(
+        threadRepliesProvider(
+          ThreadRepliesArgs(channelId: channelId, rootId: rootId),
+        ),
+      );
+    }
+    final parentId = thread.parentId;
+    if (parentId != null && parentId != rootId) {
+      ref.invalidate(
+        threadRepliesProvider(
+          ThreadRepliesArgs(channelId: channelId, rootId: parentId),
+        ),
+      );
+    }
   }
 
   bool _mergeWindowEventIntoStore(NostrEvent event) {
@@ -198,25 +268,18 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
     );
     final thread = isTimelineRow ? event.threadReference : null;
     if (thread?.parentId != null) {
-      final rootId = thread?.rootId;
-      if (rootId != null) {
-        ref.invalidate(
-          threadRepliesProvider(
-            ThreadRepliesArgs(channelId: channelId, rootId: rootId),
-          ),
-        );
-      }
-      final parentId = thread?.parentId;
-      if (parentId != null && parentId != rootId) {
-        ref.invalidate(
-          threadRepliesProvider(
-            ThreadRepliesArgs(channelId: channelId, rootId: parentId),
-          ),
-        );
-      }
-      if (!_isBroadcastReply(event)) return false;
+      // Replies are kept in the store rather than dropped here, matching
+      // desktop: the main timeline filters them out at render
+      // (`buildMainTimelineEntries`), and their parent's "N replies" row needs
+      // them as the local half of the summary merge when the relay's
+      // best-effort recount is delayed, lost, or older than this reply.
     }
+    // Thread summaries are neither a timeline row nor an aux event, but they are
+    // how the root's "N replies" row learns a reply landed — a reply itself
+    // never reaches the main timeline. Dropping them here meant the count only
+    // appeared after leaving the channel and coming back, which refetched.
     if (!isTimelineRow &&
+        event.kind != EventKind.channelThreadSummary &&
         !EventKind.channelAuxEventKinds.contains(event.kind)) {
       return false;
     }
@@ -235,12 +298,6 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
     ref
         .read(pendingLocalMessagesProvider(channelId).notifier)
         .confirm(eventIds);
-  }
-
-  static bool _isMembershipEvent(String content) {
-    return content.contains('member_joined') ||
-        content.contains('member_left') ||
-        content.contains('member_removed');
   }
 
   /// Adds a just-signed outgoing message before the relay acknowledges it.
@@ -314,6 +371,7 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
         pages: _windowStore.pages,
         liveOverlay: nextOverlay,
         liveAux: _windowStore.liveAux,
+        liveThreadSummaries: _windowStore.liveThreadSummaries,
       );
     }
 
@@ -329,10 +387,7 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
   ) {
     if (current.any((e) => e.id == incoming.id)) return current;
     final updated = [...current, incoming];
-    updated.sort((a, b) {
-      final createdAt = a.createdAt.compareTo(b.createdAt);
-      return createdAt != 0 ? createdAt : a.id.compareTo(b.id);
-    });
+    updated.sort(compareChannelTimelineEventsChronologically);
     return updated;
   }
 
@@ -398,7 +453,7 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
     return [
       ...events,
       ..._deepLinkEvents.values.where((event) => ids.add(event.id)),
-    ]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    ]..sort(compareChannelTimelineEventsChronologically);
   }
 
   Future<bool> fetchOlder() async {
@@ -447,18 +502,12 @@ class ChannelMessagesNotifier extends Notifier<AsyncValue<List<NostrEvent>>> {
     }
     state = state.whenData((events) {
       final merged = [...deduped, ...events];
-      merged.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      merged.sort(compareChannelTimelineEventsChronologically);
       _lastKnownMessages = merged;
       return merged;
     });
     return true;
   }
-}
-
-bool _isBroadcastReply(NostrEvent event) {
-  return event.tags.any(
-    (tag) => tag.length >= 2 && tag[0] == 'broadcast' && tag[1] == '1',
-  );
 }
 
 int _currentUnixSeconds() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
