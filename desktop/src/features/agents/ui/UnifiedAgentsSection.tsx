@@ -12,7 +12,6 @@ import type { AgentAvailabilityReader } from "@/features/agents/lib/useAgentAvai
 import { isManagedAgentActive } from "@/features/agents/lib/managedAgentControlActions";
 import { pickProfileAgent } from "@/features/agents/lib/pickProfileAgent";
 import { useIsArchivedPredicate } from "@/features/identity-archive/hooks";
-import { useWorkforceQuery } from "@/features/agents/workforceHooks";
 import { useUserProfileQuery } from "@/features/profile/hooks";
 import type { AgentPersona, ManagedAgent } from "@/shared/api/types";
 import type { ProfilePanelOpenOptions } from "@/shared/context/ProfilePanelContext";
@@ -109,41 +108,15 @@ export function UnifiedAgentsSection(props: UnifiedAgentsSectionProps) {
   } = props;
 
   const isArchived = useIsArchivedPredicate();
-  const workforceQuery = useWorkforceQuery();
-  const enrolledPubkeys = React.useMemo(
-    () =>
-      new Set(
-        (workforceQuery.data?.identities ?? []).map((identity) =>
-          identity.pubkey.toLowerCase(),
-        ),
-      ),
-    [workforceQuery.data],
-  );
-  const legacyAgents = React.useMemo(
-    () =>
-      agents.filter(
-        (agent) => !enrolledPubkeys.has(agent.pubkey.toLowerCase()),
-      ),
-    [agents, enrolledPubkeys],
-  );
-  const enrolledPersonaIds = React.useMemo(
-    () =>
-      new Set(
-        agents
-          .filter((agent) => enrolledPubkeys.has(agent.pubkey.toLowerCase()))
-          .flatMap((agent) => (agent.personaId ? [agent.personaId] : [])),
-      ),
-    [agents, enrolledPubkeys],
-  );
-  const legacyPersonas = React.useMemo(
-    () => personas.filter((persona) => !enrolledPersonaIds.has(persona.id)),
-    [personas, enrolledPersonaIds],
-  );
 
   const bestiePubkey = useProtectedBestiePubkey(agents)?.toLowerCase() ?? null;
+  // Regel 0 van de agents-bijdragegids: de bibliotheek toont ELKE logische
+  // identiteit en hangt de community-lidmaatschappen eronder. Ingeschreven
+  // agents uit de lijst filteren haalt de instellingen weg (start/stop, model,
+  // runtime, start-on-launch) - dat mag niet.
   const { groups, ungrouped, unknown } = React.useMemo(
-    () => buildUnifiedGroups(legacyPersonas, legacyAgents, isArchived),
-    [legacyPersonas, legacyAgents, isArchived],
+    () => buildUnifiedGroups(personas, agents, isArchived),
+    [personas, agents, isArchived],
   );
   const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
   function toggle(key: string) {
