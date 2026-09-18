@@ -127,10 +127,12 @@ const PROVIDER_CREDENTIAL_CONFIG: Partial<
   "nox-api": {
     requiredEnvKeys: ["OPENAI_COMPAT_API_KEY"],
     secretEnvVar: "OPENAI_COMPAT_API_KEY",
+    apiKeyLabel: "Nox API Key",
   },
   "nyx-local-api": {
     requiredEnvKeys: ["OPENAI_COMPAT_API_KEY"],
     secretEnvVar: "OPENAI_COMPAT_API_KEY",
+    apiKeyLabel: "Nyx Local API Key",
   },
   "ollama-desktop": {
     requiredEnvKeys: [],

@@ -1432,21 +1432,21 @@ mod tests {
     #[test]
     fn local_openai_compatible_presets_resolve_as_openai() {
         assert_eq!(
-            resolve_provider(Some("ollama-desktop"), None, None).unwrap(),
+            resolve_provider(Some("ollama-desktop"), None, None, None).unwrap(),
             Provider::OpenAi
         );
         assert_eq!(
-            resolve_provider(Some("vllm-spark-qwen"), None, None).unwrap(),
+            resolve_provider(Some("vllm-spark-qwen"), None, None, None).unwrap(),
             Provider::OpenAi
         );
     }
 
     #[test]
     fn credentialless_local_presets_still_require_openai_key() {
-        let err = resolve_provider(Some("nyx-local-api"), None, None).unwrap_err();
+        let err = resolve_provider(Some("nyx-local-api"), None, None, None).unwrap_err();
         assert!(err.contains("OPENAI_COMPAT_API_KEY required"), "{err}");
         assert_eq!(
-            resolve_provider(Some("nyx-local-api"), None, Some("sk-local")).unwrap(),
+            resolve_provider(Some("nyx-local-api"), None, Some("sk-local"), None).unwrap(),
             Provider::OpenAi
         );
     }
